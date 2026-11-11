@@ -71,6 +71,17 @@
   #velg button span { display: block; font-size: 13px; color: var(--dim); margin-top: 2px; }
   #velg button.valgt { border-color: var(--accent); background: rgba(217,164,108,.16); }
   #velg button.valgt b::after { content: "  (anbefalt)"; font-weight: 400; font-size: 13px; color: var(--accent); }
+  #velg button.stor, #velg button.middels { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: center; }
+  #velg button.stor i, #velg button.middels i { grid-row: span 2; font-style: normal; font-size: 44px; line-height: 1; }
+  #velg button.stor { background: var(--accent); color: #1a120a; border: 0; padding: 20px 18px; min-height: 104px; border-radius: 18px; }
+  #velg button.stor b { font-size: 28px; }
+  #velg button.stor span { color: rgba(26,18,10,.75); font-size: 15px; }
+  #velg button.middels { min-height: 76px; }
+  #velg button.middels i { font-size: 32px; }
+  #voksne { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 10px; }
+  #voksne summary { color: var(--dim); font-size: 14px; cursor: pointer; padding: 8px 0; }
+  #voksne .liten { color: var(--dim); font-size: 13px; margin: 4px 0 10px; }
+  body.spill #lop, body.spill #menyKnapp, body.spill #meny { display: none !important; }
   #velg .rad { display: flex; gap: 8px; margin-top: 6px; }
   #velg button.smal { width: auto; flex: 1; text-align: center; padding: 10px; font-size: 14px; }
   #forrige { display: none; background: rgba(200,80,60,.22); border: 1px solid rgba(220,110,90,.5); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
@@ -91,7 +102,7 @@
 <body>
 <div id="last"><div class="boks">
   <h1>Husvisning</h1>
-  <p>Huset på Eik, ute og inne</p>
+  <p>Huset, ute og inne</p>
   <div class="stolpe"><i id="lastStolpe"></i></div>
   <div id="lastTekst">Laster modellen</div>
 </div></div>
@@ -125,13 +136,18 @@
 <div id="velg"><div class="boks">
   <div id="forrige"></div>
   <h1>Husvisning</h1>
-  <p>Gå rundt i huset, ute og inne. Velg hvor mye telefonen skal få å bære på.</p>
-  <button data-modus="enkel"><b>Enkel</b><span>anbefalt på telefon: lite minne, enkle farger og lys</span></button>
-  <button data-modus="lett"><b>Lett</b><span>flere detaljer, skygger og himmel</span></button>
-  <button data-modus="full"><b>Full</b><span>som på Mac; krever mye grafikkminne</span></button>
-  <div class="rad"><button id="kopier" class="smal">Kopier diagnose</button><button id="visDiagnose" class="smal">Vis diagnose</button></div>
-  <textarea id="kopifelt" readonly></textarea>
-  <pre id="diagnose"></pre>
+  <p>Huset, ute og inne.</p>
+  <button id="spillKnapp" class="stor" aria-label="Spill skattejakten"><i aria-hidden="true">🐿️</i><b>Spill</b><span>skattejakt med ekornet Nøtte</span></button>
+  <button id="friKnapp" class="middels"><i aria-hidden="true">👣</i><b>Gå rundt fritt</b><span>se på huset uten oppdrag</span></button>
+  <details id="voksne"><summary>For voksne</summary>
+    <p class="liten">Gå rundt fritt med valgt modus. Spillet bruker Enkel på telefon.</p>
+    <button data-modus="enkel"><b>Enkel</b><span>anbefalt på telefon: lite minne, enkle farger og lys</span></button>
+    <button data-modus="lett"><b>Lett</b><span>flere detaljer, skygger og himmel</span></button>
+    <button data-modus="full"><b>Full</b><span>som på Mac; krever mye grafikkminne</span></button>
+    <div class="rad"><button id="kopier" class="smal">Kopier diagnose</button><button id="visDiagnose" class="smal">Vis diagnose</button></div>
+    <textarea id="kopifelt" readonly></textarea>
+    <pre id="diagnose"></pre>
+  </details>
   <div id="versjon"></div>
 </div></div>
 
@@ -148,7 +164,7 @@
 // Oppstart: bare HTML, CSS og dette lille skriptet. three.js og modellen lastes først når en modus er valgt.
 // Skriver hvert steg (brødsmuler) til localStorage før det startes, så vi ser hvor en telefon eventuelt stopper.
 (function () {
-  var VERSJON = 3, VERSJON_TEKST = 'versjon 3, kl. 17.02';
+  var VERSJON = 4, VERSJON_TEKST = 'versjon 4, kl. 18.47';
   window.HUS_V = String(VERSJON);
   var NOKKEL = 'husvisning.forsok';
   var $ = function (id) { return document.getElementById(id); };
@@ -232,12 +248,14 @@
 
   // ---------- start en modus
   var startet = false;
-  function start(modus) {
+  function start(modus, spill) {
     if (startet) return;
     startet = true;
-    forsok = { modus: modus, start: Date.now(), steg: [], ferdig: false, versjon: VERSJON };
-    window.husSmule('trykket ' + modus);
+    forsok = { modus: modus + (spill ? ' (spill)' : ''), start: Date.now(), steg: [], ferdig: false, versjon: VERSJON };
+    window.husSmule('trykket ' + modus + (spill ? ' spill' : ''));
     window.HUS_MODUS = modus;
+    window.HUS_SPILL = !!spill;
+    if (spill) document.body.classList.add('spill');
     $('velg').style.display = 'none';
     $('last').style.display = 'grid';
     var url = './app.js?v=' + VERSJON;
@@ -269,8 +287,21 @@
     $('forrige').textContent = 'Forrige forsøk (modus ' + forrige.modus + ') stoppet etter: ' + s[1] + ' (' + (s[0] / 1000).toFixed(1) + ' s)';
     $('forrige').style.display = 'block';
   }
-  if (beroring) {
-    var forvalg = valgt || 'enkel';
+  // lyd og tale må låses opp i selve trykket på iPhone; spill.js bruker det som lages her
+  function lasOppLyd() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC && !window.HUS_LYD) { window.HUS_LYD = new AC(); }
+      if (window.HUS_LYD && window.HUS_LYD.state === 'suspended') window.HUS_LYD.resume();
+      if (window.HUS_LYD) { var o = window.HUS_LYD.createBuffer(1, 1, 22050), s = window.HUS_LYD.createBufferSource(); s.buffer = o; s.connect(window.HUS_LYD.destination); s.start(0); }
+    } catch (e) {}
+    try { if (window.speechSynthesis) { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; window.speechSynthesis.speak(u); } } catch (e) {}
+  }
+  var forvalg = valgt || (beroring ? 'enkel' : (Math.min(innerWidth, innerHeight) < 600 ? 'lett' : 'full'));
+  $('spillKnapp').addEventListener('click', function () { lasOppLyd(); start(forvalg, true); });
+  $('friKnapp').addEventListener('click', function () { start(forvalg); });
+  if (param.has('spill')) { start(forvalg, true); return; }
+  {
     var knapper = document.querySelectorAll('#velg [data-modus]');
     for (var i = 0; i < knapper.length; i++) {
       (function (b) {
@@ -288,8 +319,6 @@
     $('last').style.display = 'none';
     $('velg').style.display = 'grid';
     oppdaterDiagnose();
-  } else {
-    start(valgt || (Math.min(innerWidth, innerHeight) < 600 ? 'lett' : 'full'));
   }
 })();
 </script>

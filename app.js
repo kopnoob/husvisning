@@ -8,7 +8,7 @@ import { Capsule } from 'three/addons/math/Capsule.js';
 
 const smule = window.husSmule || (() => {});
 smule('three.js lastet');
-const V = '?v=' + (window.HUS_V || '3');           // på egne filer, så telefonen ikke bruker gamle kopier
+const V = '?v=' + (window.HUS_V || '4');           // på egne filer, så telefonen ikke bruker gamle kopier
 const $ = (id) => document.getElementById(id);
 const PARAM = new URLSearchParams(location.search);
 const iPadSomMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
@@ -17,6 +17,7 @@ if (mobil) document.body.classList.add('mobil');
 const MODUS = window.HUS_MODUS || 'full';
 const ENKEL = MODUS === 'enkel';
 const LETT = MODUS !== 'full';          // enkel er også lett
+const SPILL = !!window.HUS_SPILL;       // skattejakten (spill.js) styrer berøring, mus og grensesnitt
 
 function visFeil(tittel, tekst) {
   smule('feilmelding: ' + tittel);
@@ -437,7 +438,14 @@ class Rutenett {
 }
 
 // ---------- spiller
-const RAD = 0.22, OYE = 1.6, TOPP = 1.5, STEG = 0.32;
+const RAD = 0.22, OYE = SPILL ? 1.2 : 1.6, TOPP = 1.5, STEG = 0.32;   // spillet ser huset i barnehøyde
+// autogang (spillet): gå i rett linje mot et punkt; stopper ved målet eller når veggen tar imot
+const autogang = { mål: null, fart: 1.7, ferdig: null, sjekkTid: 0, sjekkPos: new THREE.Vector3() };
+function gåTil(p, ferdig) {
+  if (autogang.ferdig) { const f = autogang.ferdig; autogang.ferdig = null; f(false); }
+  autogang.mål = p ? p.clone() : null; autogang.ferdig = ferdig || null; autogang.sjekkTid = 0; autogang.sjekkPos.copy(fot);
+}
+function avsluttGang(ok) { const f = autogang.ferdig; autogang.mål = null; autogang.ferdig = null; if (f) f(ok); }
 const fot = new THREE.Vector3();
 const kapsel = new Capsule(new THREE.Vector3(), new THREE.Vector3(), RAD);
 let yaw = 0, pitch = 0, vy = 0, paaBakken = true, oyeY = 0;
@@ -508,6 +516,14 @@ function steg(dt) {
   const fart = lop ? 3.6 : 1.45;
   const s = Math.sin(yaw), c = Math.cos(yaw);
   _flytt.set(fx * c + fz * s, 0, -fx * s + fz * c).multiplyScalar(fart * dt);
+  if (autogang.mål) {
+    if (len > 0.1) avsluttGang(false);          // tastene tar over
+    else {
+      const dx = autogang.mål.x - fot.x, dz = autogang.mål.z - fot.z, d = Math.hypot(dx, dz);
+      if (d < 0.1) avsluttGang(true);
+      else { const v = Math.min(autogang.fart * dt, d); _flytt.set(dx / d * v, 0, dz / d * v); }
+    }
+  }
 
   // vannrett: flytt og skyv ut av vegger og møbler
   fot.add(_flytt);
@@ -590,6 +606,7 @@ function visSted(t) { sted.textContent = t; sted.style.opacity = 1; stedTid = pe
 
 addEventListener('keydown', (e) => {
   taster[e.code] = true;
+  if (SPILL) { if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); return; }
   if (e.code === 'KeyM') veksleMeny();
   if (e.code === 'KeyF') $('hud').hidden = !$('hud').hidden;
   if (e.code === 'KeyO' && composer) aoPaa = !aoPaa;
@@ -604,7 +621,7 @@ const canvas = renderer.domElement;
 document.addEventListener('pointerlockchange', () => {
   const l = document.pointerLockElement === canvas;
   document.body.classList.toggle('låst', l);
-  if (!l && !mobil && klar) $('start').style.display = 'grid';
+  if (!l && !mobil && klar && !SPILL) $('start').style.display = 'grid';
 });
 document.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement !== canvas) return;
@@ -616,6 +633,8 @@ document.addEventListener('mousemove', (e) => {
 const se = { id: null, x: 0, y: 0 };
 const stikkeEl = $('stikke');
 canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (SPILL) return;                 // spillet bruker pekerhendelser (pointer events) i spill.js
   for (const t of e.changedTouches) {
     if (t.clientX < innerWidth / 2 && stikke.id === null) {
       stikke.id = t.identifier; stikke.x0 = t.clientX; stikke.y0 = t.clientY; stikke.aktiv = true; stikke.dx = stikke.dy = 0;
@@ -629,6 +648,8 @@ canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
 }, { passive: false });
 canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (SPILL) return;
   for (const t of e.changedTouches) {
     if (t.identifier === stikke.id) {
       let dx = t.clientX - stikke.x0, dy = t.clientY - stikke.y0;
@@ -674,7 +695,7 @@ $('start').addEventListener('click', () => {
   meny.classList.remove('apen');
   if (!mobil) canvas.requestPointerLock();
 });
-canvas.addEventListener('click', () => { if (!mobil && klar && document.pointerLockElement !== canvas) canvas.requestPointerLock(); });
+canvas.addEventListener('click', () => { if (!SPILL && !mobil && klar && document.pointerLockElement !== canvas) canvas.requestPointerLock(); });
 
 // størrelse: følger vinduet når adresselinja i Safari skjules/vises og ved rotasjon
 let sistW = 0, sistH = 0;
@@ -691,6 +712,7 @@ addEventListener('orientationchange', () => { tilpass(); setTimeout(tilpass, 250
 if (window.visualViewport) visualViewport.addEventListener('resize', tilpass);
 
 // ---------- løkka
+const etterSteg = [];      // spillet henger seg på her (kalles hvert bilde etter bevegelsen, før tegning)
 const klokke = new THREE.Clock();
 let fpsTid = 0, fpsN = 0, fps = 0, tregTid = 0, autoFra = Infinity;
 const auto = !PARAM.has('fast');
@@ -700,6 +722,22 @@ function loop() {
   const dt = Math.min(0.05, klokke.getDelta());
   if (klar) {
     for (let i = 0; i < SUB; i++) steg(dt / SUB);
+    if (autogang.mål) {
+      // snu blikket mykt mot gangretningen, og gi opp hvis vi står fast
+      const dx = autogang.mål.x - fot.x, dz = autogang.mål.z - fot.z;
+      if (Math.hypot(dx, dz) > 0.6) {
+        let d = Math.atan2(-dx, -dz) - yaw;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        yaw += d * Math.min(1, dt * 4);
+      }
+      autogang.sjekkTid += dt;
+      if (autogang.sjekkTid > 0.5) {
+        const flyttet = Math.hypot(fot.x - autogang.sjekkPos.x, fot.z - autogang.sjekkPos.z);
+        autogang.sjekkTid = 0; autogang.sjekkPos.copy(fot);
+        if (flyttet < 0.12) avsluttGang(false);
+      }
+    }
+    for (const f of etterSteg) f(dt);
     // øyehøyde dempes litt så trapper ikke rister
     const mål = fot.y + OYE;
     oyeY += (mål - oyeY) * Math.min(1, dt * 14);
@@ -768,6 +806,24 @@ window.eik = {
     return this.pos();
   },
   get octree() { return worldOctree; }, Octree,
+  // til spill.js: alt i three.js-koordinater
+  spill: {
+    THREE, T, scene, camera, canvas, renderer, mobil, ENKEL, OYE, RAD, fot, kapsel,
+    stråle, gåTil, etterSteg, oppdaterKapsel,
+    get går() { return !!autogang.mål; },
+    get yaw() { return yaw; }, set yaw(v) { yaw = v; },
+    get pitch() { return pitch; }, set pitch(v) { pitch = Math.max(-1.45, Math.min(1.45, v)); },
+    // flytt føttene direkte (three.js-punkt), se mot et punkt
+    settFot(p, mot) {
+      gåTil(null); fot.copy(p); vy = 0; paaBakken = true; oyeY = fot.y + OYE; oppdaterKapsel();
+      if (mot) { yaw = Math.atan2(-(mot.x - fot.x), -(mot.z - fot.z)); pitch = Math.max(-0.6, Math.min(0.4, Math.atan2(mot.y - oyeY, Math.hypot(mot.x - fot.x, mot.z - fot.z)))); }
+    },
+    // står kapselen fritt i et punkt (føtter)?
+    fritt(p) {
+      const k = new Capsule(new THREE.Vector3(p.x, p.y + STEG + RAD, p.z), new THREE.Vector3(p.x, p.y + TOPP - RAD, p.z), RAD);
+      return !worldOctree.capsuleIntersect(k);
+    },
+  },
   rendrer: renderer, scene, sol, camera, THREE, get ao() { return ao; }, lett: LETT, modus: MODUS,
   get aoPaa() { return aoPaa; }, set aoPaa(v) { aoPaa = v && !!composer; },
   kolTest() {
@@ -799,10 +855,14 @@ last().then(() => {
   document.addEventListener('visibilitychange', () => { renderer.shadowMap.needsUpdate = true; });
   $('last').style.opacity = 0;
   setTimeout(() => { $('last').style.display = 'none'; }, 650);
-  $('menyKnapp').hidden = false;
   if (auto) autoFra = performance.now() + 4000;
-  $('start').style.display = 'grid';
   if (PARAM.has('fps')) $('hud').hidden = false;
+  if (SPILL) {
+    smule('laster spillet');
+    return import('./spill.js' + V).then((m) => { m.startSpill(window.eik.spill); smule('spillet startet'); });
+  }
+  $('menyKnapp').hidden = false;
+  $('start').style.display = 'grid';
 }).catch((e) => {
   console.error(e);
   smule('lasting feilet: ' + (e && e.message ? e.message : e));
