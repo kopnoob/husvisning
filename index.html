@@ -8,17 +8,18 @@
 <style>
   :root { --bg: #0e0d0c; --fg: #f3efe8; --dim: rgba(243,239,232,.66); --panel: rgba(18,16,14,.72); --line: rgba(243,239,232,.16); --accent: #d9a46c; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); overflow: hidden;
+  html, body { margin: 0; height: 100%; height: 100dvh; background: var(--bg); color: var(--fg); overflow: hidden;
     font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
-  canvas { display: block; }
-  #last { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 20; transition: opacity .6s; }
+  canvas { display: block; position: fixed; left: 0; top: 0; }
+  :root { --sl: env(safe-area-inset-left, 0px); --sr: env(safe-area-inset-right, 0px); --st: env(safe-area-inset-top, 0px); --sb: env(safe-area-inset-bottom, 0px); }
+  #last { position: fixed; inset: 0; height: 100dvh; display: grid; place-items: center; background: var(--bg); z-index: 20; transition: opacity .6s; }
   #last .boks { width: min(360px, calc(100vw - 32px)); text-align: center; }
   #last h1 { font-weight: 600; font-size: 22px; margin: 0 0 4px; letter-spacing: .01em; }
   #last p { margin: 0 0 18px; color: var(--dim); }
   .stolpe { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
   .stolpe i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
   #lastTekst { margin-top: 10px; font-size: 13px; color: var(--dim); min-height: 1.4em; }
-  #start { position: fixed; inset: 0; display: none; place-items: center; z-index: 15; background: rgba(10,9,8,.42); cursor: pointer; }
+  #start { position: fixed; inset: 0; height: 100dvh; display: none; place-items: center; z-index: 15; background: rgba(10,9,8,.42); cursor: pointer; }
   #start .boks { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; width: min(440px, calc(100vw - 32px));
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   #start h2 { margin: 0 0 6px; font-size: 19px; font-weight: 600; }
@@ -52,7 +53,18 @@
     border-radius: 999px; padding: 10px 16px; font: inherit; font-size: 14px; }
   body.mobil #lop { display: block; }
   #lop.paa { background: var(--accent); color: #1a120a; }
+  /* mobil: alt tommelen trenger ligger nederst, over hjemmestreken og innenfor trygg sone */
+  body.mobil #hud { left: calc(10px + var(--sl)); top: calc(10px + var(--st)); }
+  body.mobil #menyKnapp { left: calc(14px + var(--sl)); right: auto; top: auto; bottom: calc(18px + var(--sb)); padding: 11px 16px; font-size: 15px; }
+  body.mobil #meny { left: calc(14px + var(--sl)); right: auto; top: auto; bottom: calc(70px + var(--sb)); max-height: calc(100dvh - 120px - var(--sb) - var(--st)); }
+  body.mobil #meny button { padding: 11px 12px; font-size: 15px; }
+  body.mobil #lop { right: calc(14px + var(--sr)); bottom: calc(18px + var(--sb)); padding: 11px 18px; font-size: 15px; }
+  body.mobil #sted { bottom: auto; top: calc(14px + var(--st)); }
   #feil { position: fixed; inset: 0; display: none; place-items: center; z-index: 30; background: var(--bg); padding: 16px; text-align: center; }
+  #feil .boks { width: min(420px, calc(100vw - 32px)); }
+  #feil h2 { margin: 0 0 8px; font-size: 19px; font-weight: 600; }
+  #feil p { margin: 0 0 14px; color: var(--dim); }
+  #feil a { display: inline-block; background: var(--accent); color: #1a120a; font-weight: 600; padding: 9px 16px; border-radius: 9px; text-decoration: none; margin: 4px; }
 </style>
 </head>
 <body>
@@ -109,8 +121,19 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { N8AOPass } from 'n8ao';
 
 const $ = (id) => document.getElementById(id);
-const mobil = matchMedia('(pointer: coarse)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
+const PARAM = new URLSearchParams(location.search);
+const iPadSomMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+const mobil = matchMedia('(pointer: coarse)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent) || iPadSomMac;
 if (mobil) document.body.classList.add('mobil');
+// lettmodus: mindre modell og lavere oppløsning for telefoner og nettbrett. ?lett tvinger, ?full slår av
+const LETT = PARAM.has('lett') || (!PARAM.has('full') && (mobil || Math.min(innerWidth, innerHeight) < 600));
+
+function visFeil(tittel, tekst) {
+  const lenke = (q, t) => `<a href="${location.pathname}${q}">${t}</a>`;
+  $('feil').innerHTML = `<div class="boks"><h2>${tittel}</h2><p>${tekst}</p>${lenke(LETT ? '?lett' : '', 'Prøv igjen')}${LETT ? '' : lenke('?lett', 'Prøv lettversjonen')}</div>`;
+  $('feil').style.display = 'grid';
+  $('last').style.display = 'none';
+}
 
 // ---------- koordinater: modellen er i Blender-mål (X øst, Y nord, Z opp). three.js: x = X, y = Z, z = -Y
 const T = (X, Y, Z) => new THREE.Vector3(X, Z, -Y);
@@ -132,8 +155,14 @@ const STEDER = [
 const INNE = [[1.51, 16.49, 3.02, 11.27], [5.74, 9.31, 2.21, 3.02], [2.845, 5.19, 11.27, 13.055], [-7.75, -1.0, 5.81, 13.01], [-9.0, -4.0, -7.4, 0.6]];
 
 // ---------- renderer og scene
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-let pikselratio = Math.min(devicePixelRatio, mobil ? 1.5 : 1.5);
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  visFeil('3D-visningen kan ikke starte', 'Nettleseren fikk ikke tilgang til WebGL-grafikk. Prøv en annen nettleser, eller slå på maskinvareakselerasjon.');
+  throw e;
+}
+let pikselratio = Math.min(devicePixelRatio, LETT ? 1.25 : 1.5);
 renderer.setPixelRatio(pikselratio);
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.AgXToneMapping;
@@ -143,21 +172,38 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 document.body.prepend(renderer.domElement);
 renderer.info.autoReset = false;
+let kontekstTapt = false;
+renderer.domElement.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  kontekstTapt = true;
+  visFeil('Grafikken stoppet', 'Enheten gikk tom for grafikkminne eller satte 3D-visningen på pause. Last siden på nytt for å fortsette.');
+});
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fb6cc);
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 400);
+// synsfelt: 72° loddrett som før, men aldri smalere enn ca. 64° vannrett (stående telefon får da høyere loddrett synsfelt)
+const VANNRETT_MIN = 64;
+function settSynsfelt() {
+  const a = innerWidth / innerHeight;
+  const v = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(VANNRETT_MIN / 2)) / a);
+  camera.fov = Math.min(110, Math.max(72, THREE.MathUtils.radToDeg(v)));
+  camera.aspect = a;
+  camera.updateProjectionMatrix();
+}
+settSynsfelt();
 camera.rotation.order = 'YXZ';
 
 const sol = new THREE.DirectionalLight(0xfff1df, 3.2);
 sol.castShadow = true;
-sol.shadow.mapSize.set(mobil ? 2048 : 4096, mobil ? 2048 : 4096);
+const SKYGGE = LETT ? 1024 : mobil ? 2048 : 4096;
+sol.shadow.mapSize.set(SKYGGE, SKYGGE);
 sol.shadow.bias = -0.0004;
 sol.shadow.normalBias = 0.025;
 scene.add(sol, sol.target);
 
 const lamper = [];          // pool av punktlys som flyttes til de nærmeste lampene
-const LAMPER = mobil ? 6 : 10;
+const LAMPER = LETT ? 4 : mobil ? 6 : 10;
 for (let i = 0; i < LAMPER; i++) {
   const l = new THREE.PointLight(0xffdcb8, 0, 9, 2);
   l.userData.mål = 0;
@@ -166,22 +212,26 @@ for (let i = 0; i < LAMPER; i++) {
 }
 
 // ---------- skyggelegging i krokene (N8AO, skjermrom). Slås av på mobil og hvis maskinen sliter
-let aoPaa = !mobil && !new URLSearchParams(location.search).has('utenao');
-const composer = new EffectComposer(renderer);
-const ao = new N8AOPass(scene, camera, innerWidth, innerHeight);
-ao.configuration.aoRadius = 1.2;
-ao.configuration.distanceFalloff = 0.8;
-ao.configuration.intensity = 3.2;
-ao.configuration.aoSamples = 12;
-ao.configuration.denoiseSamples = 6;
-ao.configuration.denoiseRadius = 8;
-ao.configuration.halfRes = true;
-ao.configuration.gammaCorrection = false;
-ao.beautyRenderTarget.samples = 4;
-composer.addPass(ao);
-composer.addPass(new OutputPass());
-composer.setPixelRatio(pikselratio);
-composer.setSize(innerWidth, innerHeight);
+// i lettmodus lages ikke etterbehandlingen i det hele tatt (den har egne skjermbuffere)
+let aoPaa = !mobil && !LETT && !PARAM.has('utenao');
+let composer = null, ao = null;
+if (!LETT) {
+  composer = new EffectComposer(renderer);
+  ao = new N8AOPass(scene, camera, innerWidth, innerHeight);
+  ao.configuration.aoRadius = 1.2;
+  ao.configuration.distanceFalloff = 0.8;
+  ao.configuration.intensity = 3.2;
+  ao.configuration.aoSamples = 12;
+  ao.configuration.denoiseSamples = 6;
+  ao.configuration.denoiseRadius = 8;
+  ao.configuration.halfRes = true;
+  ao.configuration.gammaCorrection = false;
+  ao.beautyRenderTarget.samples = 4;
+  composer.addPass(ao);
+  composer.addPass(new OutputPass());
+  composer.setPixelRatio(pikselratio);
+  composer.setSize(innerWidth, innerHeight);
+}
 
 // ---------- lasting
 const manager = new THREE.LoadingManager();
@@ -201,9 +251,9 @@ let lysListe = [];
 
 async function last() {
   const [modell, kol, himmel, lysData, info] = await Promise.all([
-    lastGlb('eikhus.glb', 'modell'),
+    lastGlb(LETT ? 'eikhus-lett.glb' : 'eikhus.glb', 'modell'),
     lastGlb('kollisjon.glb', 'kol'),
-    new Promise((ok, feil) => new RGBELoader(manager).load('himmel.hdr', (t) => { vis('him', 1); ok(t); }, undefined, feil)),
+    new Promise((ok, feil) => new RGBELoader(manager).load(LETT ? 'himmel-lett.hdr' : 'himmel.hdr', (t) => { vis('him', 1); ok(t); }, undefined, feil)),
     fetch('lys.json').then((r) => r.json()),
     fetch('info.json').then((r) => r.json()),
   ]);
@@ -215,6 +265,7 @@ async function last() {
   himmel.mapping = THREE.EquirectangularReflectionMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromEquirectangular(himmel).texture;
+  pmrem.dispose();
   scene.background = himmel;
   scene.backgroundIntensity = 1.0;
 
@@ -250,9 +301,10 @@ async function last() {
       o.castShadow = false;
       m.emissiveIntensity = Math.min(m.emissiveIntensity, navn.startsWith('led') ? 6 : 3);
     }
-    if (m.map) m.map.anisotropy = 8;
+    if (m.map) m.map.anisotropy = LETT ? 4 : 8;
     o.matrixAutoUpdate = false;
     o.updateMatrix();
+    if (LETT) frigjorEtterOpplasting(o.geometry, m);
   });
   scene.add(modell.scene);
   renderer.shadowMap.needsUpdate = true;
@@ -264,6 +316,30 @@ async function last() {
 
   window.eik.info = { ...info, trekanterLastet: Math.round(tris) };
   return true;
+}
+
+// lettmodus: når en tekstur eller et nett er lastet opp til grafikkortet, trengs ikke kopien i JavaScript lenger
+const _frigjort = new Set();
+function frigjorEtterOpplasting(geo, m) {
+  if (!_frigjort.has(geo)) {
+    _frigjort.add(geo);
+    geo.computeBoundingSphere();      // trengs til synsfeltutvelgelse, så de må regnes ut før tallene slippes
+    geo.computeBoundingBox();
+    const slipp = function () { this.array = null; };
+    for (const a of Object.values(geo.attributes)) a.onUpload(slipp);
+    if (geo.index) geo.index.onUpload(slipp);
+  }
+  for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap', 'alphaMap']) {
+    const t = m[k];
+    if (!t || _frigjort.has(t)) continue;
+    _frigjort.add(t);
+    t.onUpdate = () => {
+      const img = t.image;
+      if (img) t.userData.str = [img.width, img.height];          // til målinger
+      if (img && typeof img.close === 'function') img.close();     // ImageBitmap
+      t.onUpdate = null;
+    };
+  }
 }
 
 // ---------- spiller
@@ -422,7 +498,7 @@ addEventListener('keydown', (e) => {
   taster[e.code] = true;
   if (e.code === 'KeyM') veksleMeny();
   if (e.code === 'KeyF') $('hud').hidden = !$('hud').hidden;
-  if (e.code === 'KeyO') aoPaa = !aoPaa;
+  if (e.code === 'KeyO' && composer) aoPaa = !aoPaa;
   const i = STEDER.findIndex((s) => s[1] === e.key);
   if (i >= 0) plasser(i);
   if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
@@ -506,17 +582,24 @@ $('start').addEventListener('click', () => {
 });
 canvas.addEventListener('click', () => { if (!mobil && klar && document.pointerLockElement !== canvas) canvas.requestPointerLock(); });
 
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  composer.setSize(innerWidth, innerHeight);
-});
+// størrelse: følger vinduet når adresselinja i Safari skjules/vises og ved rotasjon
+let sistW = 0, sistH = 0;
+function tilpass() {
+  const w = innerWidth, h = innerHeight;
+  if (w === sistW && h === sistH) return;
+  sistW = w; sistH = h;
+  settSynsfelt();
+  renderer.setSize(w, h);
+  if (composer) composer.setSize(w, h);
+}
+addEventListener('resize', tilpass);
+addEventListener('orientationchange', () => { tilpass(); setTimeout(tilpass, 250); setTimeout(tilpass, 700); });
+if (window.visualViewport) visualViewport.addEventListener('resize', tilpass);
 
 // ---------- løkka
 const klokke = new THREE.Clock();
 let fpsTid = 0, fpsN = 0, fps = 0, tregTid = 0, autoFra = Infinity;
-const auto = !new URLSearchParams(location.search).has('fast');
+const auto = !PARAM.has('fast');
 const SUB = 5;
 function loop() {
   const dt = Math.min(0.05, klokke.getDelta());
@@ -542,21 +625,22 @@ function loop() {
     }
     if (performance.now() - stedTid > 2200) sted.style.opacity = 0;
   }
+  if (kontekstTapt) return;
   renderer.info.reset();
-  if (aoPaa) composer.render(dt); else renderer.render(scene, camera);
+  if (aoPaa && composer) composer.render(dt); else renderer.render(scene, camera);
 
   fpsN++; fpsTid += dt;
   if (fpsTid >= 0.5) {
     fps = fpsN / fpsTid; fpsN = 0; fpsTid = 0;
     const inf = renderer.info.render;
     $('hud').textContent = `${fps.toFixed(0)} bilder/s   ${(inf.triangles / 1e6).toFixed(2)} mill. trekanter   ${inf.calls} tegnekall\n`
-      + `${aoPaa ? 'AO på' : 'AO av'}  oppløsning ${pikselratio}\n` + `X ${fot.x.toFixed(2)}  Y ${(-fot.z).toFixed(2)}  Z ${fot.y.toFixed(2)}`;
+      + `${LETT ? 'lett  ' : ''}${aoPaa ? 'AO på' : 'AO av'}  oppløsning ${pikselratio}\n` + `X ${fot.x.toFixed(2)}  Y ${(-fot.z).toFixed(2)}  Z ${fot.y.toFixed(2)}`;
     window.eik.fps = fps;
     // senk oppløsningen litt hvis maskinen ikke klarer 60
     if (klar && fps < 55 && performance.now() > autoFra) {
       tregTid += 0.5;
       if (tregTid > 3) {
-        if (pikselratio > 1) { pikselratio = Math.max(1, pikselratio - 0.25); renderer.setPixelRatio(pikselratio); composer.setPixelRatio(pikselratio); composer.setSize(innerWidth, innerHeight); }
+        if (pikselratio > 1) { pikselratio = Math.max(1, pikselratio - 0.25); renderer.setPixelRatio(pikselratio); if (composer) { composer.setPixelRatio(pikselratio); composer.setSize(innerWidth, innerHeight); } }
         else if (aoPaa) aoPaa = false;
         tregTid = 0;
       }
@@ -587,8 +671,8 @@ window.eik = {
     }
     return this.pos();
   },
-  rendrer: renderer, scene, sol, camera, THREE, ao,
-  get aoPaa() { return aoPaa; }, set aoPaa(v) { aoPaa = v; },
+  rendrer: renderer, scene, sol, camera, THREE, ao, lett: LETT,
+  get aoPaa() { return aoPaa; }, set aoPaa(v) { aoPaa = v && !!composer; },
   kolTest() {
     oppdaterKapsel();
     const tr = []; worldOctree.getCapsuleTriangles(kapsel, tr);
@@ -618,11 +702,13 @@ last().then(() => {
   $('menyKnapp').hidden = false;
   if (auto) autoFra = performance.now() + 4000;
   $('start').style.display = 'grid';
-  if (new URLSearchParams(location.search).has('fps')) $('hud').hidden = false;
+  if (PARAM.has('fps')) $('hud').hidden = false;
 }).catch((e) => {
   console.error(e);
-  $('feil').style.display = 'grid';
-  $('feil').textContent = 'Klarte ikke å laste modellen: ' + (e && e.message ? e.message : e) + '. Siden må åpnes via en lokal webserver, ikke som fil.';
+  const fil = location.protocol === 'file:';
+  visFeil('Klarte ikke å laste modellen', fil
+    ? 'Siden må åpnes via en webserver, ikke som fil.'
+    : 'Sjekk nettforbindelsen og prøv igjen. Feilen var: ' + String(e && e.message ? e.message : e).replace(/[<>&]/g, ''));
 });
 loop();
 </script>
