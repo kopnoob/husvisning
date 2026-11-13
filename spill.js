@@ -819,7 +819,7 @@ export function startSpill(A) {
   let modusSkjerm = 'kart';
 
   // ---------------------------------------------------------------- minispill (mini/*.js, lastes først når de åpnes)
-  const miniV = '?v=' + (window.HUS_V || '7');
+  const miniV = '?v=' + (window.HUS_V || '8');
   let miniListe = [], miniTing = [], miniÅpen = false;
   const miniMat = {};
   import('./mini/liste.js' + miniV).then((m) => { miniListe = m.MINISPILL; tegnMiniRute(); if (oppdrag && !travel) leggMiniMerker(); }).catch((e) => smule('minispill-lista feilet: ' + (e && e.message)));

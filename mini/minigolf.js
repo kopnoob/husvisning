@@ -8,7 +8,7 @@ export default {
     const HULL = [
       { poly: [[2, 1], [8, 1], [8, 15], [2, 15]], tee: [5, 13.4], kopp: [5, 3.2], par: 2, sand: [], blokk: [] },
       { poly: [[1, 1], [9, 1], [9, 15], [1, 15]], tee: [2.8, 13.4], kopp: [7.2, 3], par: 2, sand: [[5, 8.2, 1.7], [7.6, 11.6, 1]], blokk: [[1, 5.6, 3.4, 6.2]] },
-      { poly: [[2, 1], [8, 1], [8, 15], [2, 15]], tee: [5, 13.4], kopp: [5, 3], par: 3, sand: [], blokk: [[2, 7.7, 4.05, 8.3], [5.95, 7.7, 8, 8.3]], mølle: [5, 8, 1.75] },
+      { poly: [[2, 1], [8, 1], [8, 15], [2, 15]], tee: [5, 13.4], kopp: [5, 3], par: 3, sand: [], blokk: [], mølle: [5, 8, 1.5] },      // ingen vegger ved mølla: det er alltid fri bane på begge sider av bladene
       { poly: [[1, 1], [9, 1], [9, 5.6], [4.6, 5.6], [4.6, 15], [1, 15]], tee: [2.8, 13.4], kopp: [7.4, 3.2], par: 3, sand: [[2.2, 2.4, 0.9]], blokk: [] },
       { poly: [[1, 1], [6.8, 1], [9, 3.2], [9, 15], [1, 15]], tee: [2.8, 13.4], kopp: [2.6, 3.2], par: 3, sand: [[7.7, 11.2, 0.85]], blokk: [[1, 7.7, 6.5, 8.3]] },
     ];
@@ -72,7 +72,10 @@ export default {
         b.x += b.vx * h; b.y += b.vy * h;
         if (dk < KR && Math.hypot(b.vx, b.vy) < 6.5) { b.inne = true; return treff; }
         for (const s of vegger) treff = Math.max(treff, kollider(b, s, 0, 0, 0, 0));
-        if (hull.mølle) for (const s of blader(t + i * h)) treff = Math.max(treff, kollider(b, s, 0.12, hull.mølle[0], hull.mølle[1], 1.5));
+        if (hull.mølle) {
+          for (const s of blader(t + i * h)) treff = Math.max(treff, kollider(b, s, 0.12, hull.mølle[0], hull.mølle[1], 1.5));
+          treff = Math.max(treff, kollider(b, [hull.mølle[0], hull.mølle[1], hull.mølle[0] + 0.001, hull.mølle[1]], 0.5, 0, 0, 0));      // møllehuset er massivt
+        }
       }
       return treff;
     }
