@@ -8,7 +8,7 @@ import { Capsule } from 'three/addons/math/Capsule.js';
 
 const smule = window.husSmule || (() => {});
 smule('three.js lastet');
-const V = '?v=' + (window.HUS_V || '8');           // på egne filer, så telefonen ikke bruker gamle kopier
+const V = '?v=' + (window.HUS_V || '9');           // på egne filer, så telefonen ikke bruker gamle kopier
 const $ = (id) => document.getElementById(id);
 const PARAM = new URLSearchParams(location.search);
 const iPadSomMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;

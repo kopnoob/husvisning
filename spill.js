@@ -108,6 +108,8 @@ export function startSpill(A) {
   #sMynter { background: rgba(255,250,240,.92); border-radius: 999px; padding: 0 16px 0 10px; height: 46px; display: flex; align-items: center; gap: 6px; font-size: 22px; font-weight: 700;
     box-shadow: 0 3px 10px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; pointer-events: none; }
   #sMynter.hopp { animation: sHopp .4s; }
+  #sSpade { display: none; width: 46px; height: 46px; line-height: 46px; text-align: center; font-size: 26px; border-radius: 50%; background: rgba(255,250,240,.92); box-shadow: 0 3px 10px rgba(0,0,0,.25); pointer-events: none; }
+  #sSpade.vis { display: block; animation: sHopp .5s; }
   @keyframes sHopp { 50% { transform: scale(1.25); } }
   #sLaas { position: relative; width: 46px; height: 46px; line-height: 46px; font-size: 20px; opacity: .8; }
   #sLaas i { position: absolute; inset: -4px; border-radius: 50%; pointer-events: none; }
@@ -180,6 +182,7 @@ export function startSpill(A) {
     <div id="sTopp">
       <button id="sHjem" class="sRund" aria-label="Alle spillene">🎮</button>
       <div id="sMynter"><span>${MYNT}</span><b>0</b></div>
+      <div id="sSpade" aria-label="Du har spaden">🪏</div>
       <div class="fyll"></div>
       <button id="sGjenta" class="sRund" aria-label="Vis beskjeden igjen">💬</button>
       <button id="sLyd" class="sRund" aria-label="Lyd av eller på">🔊</button>
@@ -318,6 +321,16 @@ export function startSpill(A) {
       const g = gruppe(del(G.syl, 0xf7a8c4, [0.2, 0.12, 0.2], [0, 0.06, 0]), del(G.syl, 0xfff3f6, [0.205, 0.03, 0.205], [0, 0.13, 0]),
         del(G.kule, 0xe0312f, 0.025, [0.1, 0.16, 0]), del(G.kule, 0xe0312f, 0.025, [-0.08, 0.16, 0.06]), del(G.kule, 0xe0312f, 0.025, [-0.03, 0.16, -0.11]));
       for (const [x, z] of [[0.05, 0.05], [-0.06, -0.02], [0.02, -0.08]]) { g.add(del(G.syl, 0x8fd16a, [0.01, 0.08, 0.01], [x, 0.185, z])); g.add(del(G.kule, 0xffc93f, [0.012, 0.022, 0.012], [x, 0.24, z], 1.2)); }
+      return g;
+    },
+    spade() {          // stående spade: skaft i eik, håndtak, blad i stål
+      const g = gruppe(
+        del(G.syl, 0x9a6b3c, [0.018, 0.78, 0.018], [0, 0.62, 0], 0.15),
+        del(G.boks, 0x9a6b3c, [0.15, 0.03, 0.03], [0, 1.02, 0], 0.15),
+        del(G.syl, 0x9a6b3c, [0.012, 0.09, 0.012], [-0.07, 0.975, 0], 0.15), del(G.syl, 0x9a6b3c, [0.012, 0.09, 0.012], [0.07, 0.975, 0], 0.15),
+        del(G.boks, 0x5f6266, [0.2, 0.26, 0.012], [0, 0.13, 0], 0.25),
+        del(G.boks, 0x7d8085, [0.06, 0.06, 0.03], [0, 0.27, 0], 0.25));
+      g.rotation.z = 0.18;
       return g;
     },
     notte() {
@@ -819,7 +832,7 @@ export function startSpill(A) {
   let modusSkjerm = 'kart';
 
   // ---------------------------------------------------------------- minispill (mini/*.js, lastes først når de åpnes)
-  const miniV = '?v=' + (window.HUS_V || '8');
+  const miniV = '?v=' + (window.HUS_V || '9');
   let miniListe = [], miniTing = [], miniÅpen = false;
   const miniMat = {};
   import('./mini/liste.js' + miniV).then((m) => { miniListe = m.MINISPILL; tegnMiniRute(); if (oppdrag && !travel) leggMiniMerker(); }).catch((e) => smule('minispill-lista feilet: ' + (e && e.message)));
@@ -827,7 +840,10 @@ export function startSpill(A) {
   const FRI = { id: 'fri', navn: 'Gå rundt', start: [8.6, 9.7, 0, 8.6, 6.0, 0.85], ingenTryll: true,
     hint1: 'Her borte! Jeg har funnet et spill.',
     kjør(o) {
+      leggSpade();
       o.hjelpMål = () => {
+        if (spade.ønsket && spade.ting) return spade.ting;
+        if (spade.tilGrav) { const g = miniTing.find((t) => t.m.id === 'grav'); if (g) return g; }
         let best = null, bd = 1e9;
         for (const t of miniTing) { const d = t.pos.distanceTo(camera.position) + Math.abs(t.pos.y - camera.position.y) * 4 + (data.mini[t.m.id] ? 60 : 0); if (d < bd) { bd = d; best = t; } }
         return best;
@@ -835,6 +851,31 @@ export function startSpill(A) {
       const ny = !Object.keys(data.mini).length;
       si(ny ? 'Hei! Jeg er Nøtte. Trykk på gulvet for å gå, og på de runde merkene for å spille!' : 'Trykk på de runde merkene for å spille!', '🎮');
     } };
+  // Spaden til gullgravingen ligger et tilfeldig sted inne i huset. Den må hentes før man kan grave (gjelder til siden lastes på nytt).
+  const SPADESTED = [
+    { navn: 'bi-inngangen', p: [4.4, 12.3, 0] },
+    { navn: 'vaskerommet', p: [11.05, 4.1, 2.776] },
+    { navn: 'hobbyrommet på loftet', p: [15.0, 8.4, 5.42] },
+    { navn: 'TV-stua', p: [4.9, 6.75, 0] },
+    { navn: 'kjøkkenet', p: [15.8, 9.6, -0.385] },
+  ];
+  const spade = { har: false, ting: null, ønsket: false, tilGrav: false, sted: null };
+  function leggSpade() {
+    if (spade.har || spade.ting) return;
+    const st = SPADESTED[Math.floor(Math.random() * SPADESTED.length)];
+    spade.sted = st.navn;
+    const pos = påFlate(st.p[0], st.p[1], st.p[2], { gulv: true, h: 0 });
+    const t = lagTing(lag.spade(), pos, { r: 0.45, hopp: false, glitterH: 1.15, navn: 'spade', hjelp: false,
+      ved: (t) => {
+        fjernTing(t); spade.ting = null; spade.har = true; spade.ønsket = false; spade.tilGrav = true;
+        $('sSpade').classList.add('vis');
+        lyd.pling(); sprut(t.pos.clone().add(V3(0, 0.6, 0)), 18, { farger: [0xffcf3f, 0xffffff], fart: 1.4, str: 0.025 });
+        stille = 0; hjelpNivå = 0; framgang();
+        si('Du fant spaden! Gå ut i hagen og grav etter gull.', '🪏');
+      } });
+    t.hint = 'Spaden står her! Trykk på den.';
+    spade.ting = t;
+  }
   function sumStjerner() { let n = 0; for (const k in data.mini) n += data.mini[k].stj || 0; return n; }
   function sjekkPokal() {
     // første gang alle spillene er prøvd, og første gang alle har tre stjerner: feiring
@@ -872,6 +913,13 @@ export function startSpill(A) {
   }
   function åpneMini(m) {
     if (miniÅpen || travel) return;
+    if (m.krever === 'spade' && !spade.har) {
+      lydKlar(); lyd.hmm();
+      spade.ønsket = true; stille = 0; hjelpNivå = 0;
+      si('Du trenger en spade for å grave! Den står et sted inne i huset. Trykk på meg om du ikke finner den.', '🪏');
+      return;
+    }
+    if (m.id === 'grav') spade.tilGrav = false;
     miniÅpen = true;
     lydKlar(); lyd.pling();
     A.gåTil(null);
@@ -1168,6 +1216,9 @@ export function startSpill(A) {
         påSkjerm: s.foran && s.x > 20 && s.x < innerWidth - 20 && s.y > 20 && s.y < innerHeight - 20 };
     },
     settStille(s) { stille = s; },
+    spade: { har: () => spade.har, sted: () => spade.sted, ting: () => (spade.ting ? (() => { const s = skjerm(spade.ting.pos); return { x: Math.round(s.x), y: Math.round(s.y), foran: s.foran, synlig: synlig(spade.ting), avst: +spade.ting.pos.distanceTo(camera.position).toFixed(2) }; })() : null),
+      flytt: (i) => { if (spade.ting) fjernTing(spade.ting); spade.ting = null; spade.har = false; const r = Math.random; Math.random = () => (i + 0.5) / SPADESTED.length; leggSpade(); Math.random = r; return spade.sted; },
+      tryll: () => { if (spade.ting) tryllTil(spade.ting); }, ståsted: () => !!(spade.ting && ståsted(spade.ting.pos)) },
     mini: { liste: () => miniListe.map((m) => m.id), åpne: (id) => { const m = miniListe.find((x) => x.id === id); if (m) åpneMini(m); }, åpen: () => miniÅpen,
       merker: () => miniTing.map((t) => { const s = skjerm(t.pos); return { id: t.m.id, x: Math.round(s.x), y: Math.round(s.y), foran: s.foran, synlig: synlig(t), avst: +t.pos.distanceTo(camera.position).toFixed(2), ståsted: !!ståsted(t.pos) }; }),
       tryll: (id) => { const t = miniTing.find((x) => x.m.id === id); if (t) tryllTil(t); } },

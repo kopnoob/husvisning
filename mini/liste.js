@@ -13,5 +13,6 @@ export const MINISPILL = [
   { id: 'bil', navn: 'Bilturen', ikon: '🚗', rom: 'Garasjen', sted: [-4.4, 9.4, -0.516] },
   { id: 'minigolf', navn: 'Minigolf', ikon: '⛳', rom: 'Annekset', sted: [-6.8, -0.6, -0.435] },
   { id: 'slange', navn: 'Larven', ikon: '🐛', rom: 'Barnerommet', sted: [3.5, 5.6, 2.776] },
+  { id: 'grav', navn: 'Gullgraving', ikon: '💰', rom: 'Hagen', sted: [5.0, -4.0, -0.55], krever: 'spade' },
   { id: 'dart', navn: 'Pilkast', ikon: '🎯', rom: 'Tenåringsrommet', sted: [3.6, 9.0, 2.776] },
 ];
