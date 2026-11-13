@@ -1,6 +1,7 @@
 // Skattejakten: spill for barn på 6 år oppå husvisningen. Lastes av app.js når «Spill» er valgt (window.HUS_SPILL).
 // All styring er én finger: trykk på en ting for å ta den, trykk på gulvet for å gå, dra for å se rundt.
-// Ekornet Nøtte snakker (speechSynthesis med norsk stemme), viser vei og hjelper av seg selv hvis barnet står fast.
+// Ekornet Nøtte viser vei og hjelper av seg selv hvis barnet står fast. Ingen tale: beskjeder vises som korte snakkebobler.
+// Minispillene ligger i mini/ og åpnes fra kartet eller fra de runde merkene i rommene.
 // Ingen nettverk, ingen lenker ut, ingen personopplysninger. Framgang i localStorage (nøkkel husspill.v1).
 // Unngår toppnivå-await, regex-lookbehind og structuredClone, som app.js.
 
@@ -17,7 +18,7 @@ export function startSpill(A) {
   // ---------------------------------------------------------------- lagring
   function lesLager() { try { return JSON.parse(localStorage.getItem(LAGER) || 'null'); } catch (e) { return null; } }
   let data = lesLager() || {};
-  data = { v: 1, ferdig: data.ferdig || {}, mynter: data.mynter || 0, lyd: data.lyd !== false, tale: data.tale !== false };
+  data = { v: 1, ferdig: data.ferdig || {}, mynter: data.mynter || 0, lyd: data.lyd !== false, mini: data.mini || {} };
   function lagre() { try { localStorage.setItem(LAGER, JSON.stringify(data)); } catch (e) {} }
 
   // ---------------------------------------------------------------- lyd (WebAudio, ingen filer)
@@ -93,15 +94,6 @@ export function startSpill(A) {
     stjerne(n) { if (!lydKlar()) return; for (let i = 0; i < n; i++) tone(1047 * Math.pow(1.26, i), i * 0.15, 0.3, { type: 'triangle', vol: 0.15 }); },
     klikk() { if (!lydKlar()) return; tone(1200, 0, 0.04, { vol: 0.05 }); },
   };
-
-  // ---------------------------------------------------------------- tale
-  let stemme = null;
-  function finnStemme() {
-    if (!window.speechSynthesis) return;
-    const v = speechSynthesis.getVoices() || [];
-    stemme = v.find((x) => /^nb/i.test(x.lang)) || v.find((x) => /^no/i.test(x.lang)) || v.find((x) => /^nn/i.test(x.lang)) || null;
-  }
-  if (window.speechSynthesis) { finnStemme(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', finnStemme); }
 
   // ---------------------------------------------------------------- grensesnitt (DOM)
   const stil = document.createElement('style');
@@ -181,6 +173,13 @@ export function startSpill(A) {
   #sVoksen p { color: rgba(243,239,232,.7); font-size: 14px; }
   #sVoksen button { display: block; width: 100%; margin: 8px 0; padding: 12px; border-radius: 10px; background: #2c2824; color: #f3efe8; font-size: 16px; text-align: left; }
   #sVoksen button.fare { background: #6b2a1d; }
+  #sKart .ark.spillark { margin-top: 14px; background-color: #e9f0d8; }
+  #sMiniRute { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  #sMiniRute button { aspect-ratio: 1; min-height: 64px; border-radius: 14px; background: #fff; border: 3px solid #9bb66a !important; font-size: 34px; position: relative; color: #2a1d10; padding: 0 0 12px; }
+  #sMiniRute button:active { transform: scale(.95); }
+  #sMiniRute button small { position: absolute; left: 0; right: 0; bottom: 3px; font-size: 11px; line-height: 1; letter-spacing: 1px; filter: grayscale(1); opacity: .35; }
+  #sMiniRute button small b { filter: none; }
+  #sMiniRute button.gaa { background: #f2a541; border-color: #c9812a !important; }
   body.spill #sted, body.spill #hud { display: none !important; }
   `;
   document.head.appendChild(stil);
@@ -192,7 +191,7 @@ export function startSpill(A) {
       <button id="sHjem" class="sRund" aria-label="Til skattekartet">🗺️</button>
       <div id="sMynter"><span>${MYNT}</span><b>0</b></div>
       <div class="fyll"></div>
-      <button id="sGjenta" class="sRund" aria-label="Si det igjen">👂</button>
+      <button id="sGjenta" class="sRund" aria-label="Vis beskjeden igjen">💬</button>
       <button id="sLyd" class="sRund" aria-label="Lyd av eller på">🔊</button>
     </div>
     <div id="sPrat"><span class="fjes">🐿️</span><span class="tekst"></span><span class="ikon"></span></div>
@@ -209,14 +208,15 @@ export function startSpill(A) {
     <button id="sFerdig" aria-label="Ferdig med golf">✔</button>
     <div id="sTryll"></div>
     <div id="sKart"><div class="ark"><h2>🗺️ Skattekartet</h2><div id="sRutenett"></div></div>
+      <div class="ark spillark"><h2>🎮 Spill</h2><div id="sMiniRute"></div></div>
       <div style="position:absolute;top:calc(12px + var(--st));right:calc(12px + var(--sr))"><button id="sLaas" class="sRund" aria-label="For voksne: hold inne">🔒<i></i></button></div>
-      <div style="position:absolute;top:calc(12px + var(--st));left:calc(12px + var(--sl));display:flex;gap:10px"><button id="sGjenta2" class="sRund" aria-label="Si det igjen">👂</button><button id="sLyd2" class="sRund" aria-label="Lyd">🔊</button></div>
+      <div style="position:absolute;top:calc(12px + var(--st));left:calc(12px + var(--sl));display:flex;gap:10px"><button id="sGjenta2" class="sRund" aria-label="Vis beskjeden igjen">💬</button><button id="sLyd2" class="sRund" aria-label="Lyd">🔊</button></div>
     </div>
     <div id="sFeiring"><div class="stor"></div><div class="tekst"></div><div class="rad"></div><button id="sVidere" aria-label="Videre">▶</button></div>
     <div id="sVoksen"><div class="boks">
       <h3>For voksne</h3>
       <p>Framgangen ligger bare på denne enheten. Ingen data sendes noe sted.</p>
-      <button id="vLyd"></button><button id="vTale"></button>
+      <button id="vLyd"></button>
       <button id="vNull" class="fare">Nullstill framgang</button>
       <button id="vStart">Til startskjermen (Gå rundt fritt, moduser, diagnose)</button>
       <button id="vLukk">Lukk</button>
@@ -229,7 +229,6 @@ export function startSpill(A) {
   function oppdaterLydKnapper() {
     $('sLyd').textContent = $('sLyd2').textContent = data.lyd ? '🔊' : '🔇';
     $('vLyd').textContent = 'Lydeffekter: ' + (data.lyd ? 'på (trykk for av)' : 'av (trykk for på)');
-    $('vTale').textContent = 'Tale: ' + (data.tale ? 'på (trykk for av)' : 'av (trykk for på)') + (stemme ? '' : ' · ingen norsk stemme funnet');
   }
   oppdaterLydKnapper();
 
@@ -241,17 +240,6 @@ export function startSpill(A) {
     prat.classList.remove('vis'); void prat.offsetWidth; prat.classList.add('vis');
     $('sIkoner').style.top = (prat.getBoundingClientRect().bottom + 8) + 'px';
     pratTid = performance.now() + Math.max(5000, tekst.length * 110);
-    if (data.tale && window.speechSynthesis) {
-      if (!stemme) finnStemme();
-      if (stemme) {
-        try {
-          speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(tekst);
-          u.voice = stemme; u.lang = stemme.lang; u.rate = 0.95; u.pitch = 1.2;
-          speechSynthesis.speak(u);
-        } catch (e) {}
-      }
-    }
     smule('si: ' + tekst.slice(0, 60));
     if (vent) return new Promise((r) => setTimeout(r, Math.max(1500, tekst.length * 65)));
   }
@@ -757,6 +745,19 @@ export function startSpill(A) {
       if (best.ved) best.ved(best);
       return;
     }
+    let mBest = null, mBd = 1e9;
+    for (const t of miniTing) {
+      const s = skjerm(t.pos);
+      if (!s.foran) continue;
+      const avst = t.pos.distanceTo(camera.position);
+      const d = Math.hypot(s.x - x, s.y - y);
+      if (d < Math.max(60, 0.3 / Math.max(0.3, avst) * innerHeight * 0.9) && d < mBd && synlig(t)) { mBd = d; mBest = t; }
+    }
+    if (mBest) {
+      if (mBest.pos.distanceTo(camera.position) > 7) { gåMot(mBest.pos, x, y); return; }
+      visMerke(x, y); åpneMini(mBest.m);
+      return;
+    }
     if (nøtte.obj.visible && nøtte.modus !== 'gjemt') {
       const s = skjerm(nøtte.obj.position.clone().add(V3(0, 0.25, 0)));
       if (s.foran && Math.hypot(s.x - x, s.y - y) < 70) { lyd.fnis(0.2); visVei(); return; }
@@ -796,7 +797,7 @@ export function startSpill(A) {
   $('sHjem').addEventListener('click', () => { lydKlar(); avsluttOppdrag(); visKart(); });
   $('sGjenta').addEventListener('click', () => { lydKlar(); gjenta(); });
   $('sGjenta2').addEventListener('click', () => { lydKlar(); gjenta(); });
-  const lydKnapp = () => { data.lyd = !data.lyd; data.tale = data.lyd; if (!data.tale && window.speechSynthesis) speechSynthesis.cancel(); lagre(); oppdaterLydKnapper(); if (data.lyd) lyd.pling(); };
+  const lydKnapp = () => { data.lyd = !data.lyd; lagre(); oppdaterLydKnapper(); if (data.lyd) lyd.pling(); };
   $('sLyd').addEventListener('click', lydKnapp);
   $('sLyd2').addEventListener('click', lydKnapp);
 
@@ -820,10 +821,9 @@ export function startSpill(A) {
   function visVoksen() { nullKlikk = 0; $('vNull').textContent = 'Nullstill framgang'; oppdaterLydKnapper(); $('sVoksen').style.display = 'block'; }
   $('vLukk').addEventListener('click', () => { $('sVoksen').style.display = 'none'; });
   $('vLyd').addEventListener('click', () => { data.lyd = !data.lyd; lagre(); oppdaterLydKnapper(); });
-  $('vTale').addEventListener('click', () => { data.tale = !data.tale; if (!data.tale && window.speechSynthesis) speechSynthesis.cancel(); lagre(); oppdaterLydKnapper(); });
   $('vNull').addEventListener('click', () => {
     if (++nullKlikk < 2) { $('vNull').textContent = 'Trykk en gang til for å slette all framgang'; return; }
-    data.ferdig = {}; data.mynter = 0; lagre(); settMynter();
+    data.ferdig = {}; data.mynter = 0; data.mini = {}; lagre(); settMynter();
     $('vNull').textContent = 'Framgangen er nullstilt';
     tegnKart();
   });
@@ -899,6 +899,84 @@ export function startSpill(A) {
     }
   }
   const KART_REKKE = ['m2', 'm3', 'm5', 'm1', 'm9', 'm4', 'm6', 'm7', 'm8'];
+
+  // ---------------------------------------------------------------- minispill (mini/*.js, lastes først når de åpnes)
+  const miniV = '?v=' + (window.HUS_V || '6');
+  let miniListe = [], miniTing = [], miniÅpen = false;
+  const miniMat = {};
+  import('./mini/liste.js' + miniV).then((m) => { miniListe = m.MINISPILL; tegnMiniRute(); if (oppdrag) leggMiniMerker(); }).catch((e) => smule('minispill-lista feilet: ' + (e && e.message)));
+  // «Gå rundt»: ingen oppgave, bare huset og merkene for spillene. Nøtte viser vei til nærmeste spill som ikke er prøvd.
+  const FRI = { id: 'fri', navn: 'Gå rundt', start: [8.6, 10.3, 0, 8.6, 7.0, 0.6],
+    kjør(o) {
+      o.hjelpMål = () => {
+        let best = null, bd = 1e9;
+        for (const t of miniTing) { const d = t.pos.distanceTo(camera.position) + (data.mini[t.m.id] ? 60 : 0); if (d < bd) { bd = d; best = t; } }
+        return best;
+      };
+      si('Gå rundt i huset! Trykk på de runde merkene for å spille.', '🎮');
+    } };
+  function tegnMiniRute() {
+    const r = $('sMiniRute');
+    r.innerHTML = '';
+    const g = document.createElement('button');
+    g.className = 'gaa'; g.textContent = '🚶'; g.setAttribute('aria-label', 'Gå rundt i huset'); g.dataset.id = 'fri';
+    g.addEventListener('click', () => { lydKlar(); startOppdrag(FRI); });
+    r.appendChild(g);
+    for (const m of miniListe) {
+      const b = document.createElement('button');
+      const stj = (data.mini[m.id] || {}).stj || 0;
+      b.innerHTML = m.ikon + '<small>' + [0, 1, 2].map((i) => (i < stj ? '<b>⭐</b>' : '⭐')).join('') + '</small>';
+      b.setAttribute('aria-label', m.navn + ' (' + m.rom + ')');
+      b.dataset.id = m.id;
+      b.addEventListener('click', () => åpneMini(m));
+      r.appendChild(b);
+    }
+  }
+  function åpneMini(m) {
+    if (miniÅpen || travel) return;
+    miniÅpen = true;
+    lydKlar(); lyd.pling();
+    A.gåTil(null);
+    smule('minispill ' + m.id);
+    Promise.all([import('./mini/ramme.js' + miniV), import('./mini/' + m.id + '.js' + miniV)]).then((mod) => {
+      window.HUS_PAUSE = true;                        // huset tegnes ikke mens minispillet dekker skjermen
+      return mod[0].startMini(Object.assign({}, m, mod[1].default), { lydPå: () => data.lyd, beste: (data.mini[m.id] || {}).beste || 0,
+        vedRunde: (res) => {
+          const d = data.mini[m.id] || (data.mini[m.id] = { stj: 0, beste: 0, n: 0 });
+          d.stj = Math.max(d.stj, res.stjerner); d.beste = Math.max(d.beste, res.poeng || 0); d.n++;
+          data.mynter += res.stjerner; lagre();
+        } });
+    }).then(() => { window.HUS_PAUSE = false; miniÅpen = false; stille = 0; settMynter(); tegnMiniRute(); })
+      .catch((e) => { window.HUS_PAUSE = false; miniÅpen = false; smule('minispill feilet: ' + (e && e.message)); lyd.hmm(); });
+  }
+  // merket i rommet: en rund brikke med spillets ikon, alltid vendt mot barnet
+  function miniMerke(m) {
+    if (!miniMat[m.id]) {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const x = c.getContext('2d');
+      x.fillStyle = '#f2a541'; x.beginPath(); x.arc(64, 64, 62, 0, 7); x.fill();
+      x.fillStyle = '#fffaf0'; x.beginPath(); x.arc(64, 64, 52, 0, 7); x.fill();
+      x.font = '68px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(m.ikon, 64, 69);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      miniMat[m.id] = new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false });
+    }
+    const s = new THREE.Sprite(miniMat[m.id]); s.scale.setScalar(0.36); s.renderOrder = 4;
+    return s;
+  }
+  function fjernMiniMerker() { for (const t of miniTing) scene.remove(t.obj); miniTing = []; }
+  function leggMiniMerker() {
+    fjernMiniMerker();
+    for (const m of miniListe) {
+      const pos = påFlate(m.sted[0], m.sted[1], m.sted[2], { gulv: true, h: 0.95 });
+      const obj = miniMerke(m);
+      obj.position.copy(pos); scene.add(obj);
+      miniTing.push({ m, obj, pos, fase: Math.random() * 6 });
+    }
+  }
+  function miniSteg(tid) {
+    for (const t of miniTing) { t.obj.position.y = t.pos.y + Math.sin(tid * 2 + t.fase) * 0.04; t.obj.scale.setScalar(0.36 + Math.sin(tid * 3 + t.fase) * 0.02); }
+  }
   function visKart(førsteGang) {
     modusSkjerm = 'kart';
     oppdrag = null;
@@ -930,12 +1008,14 @@ export function startSpill(A) {
       nøtte.modus = 'følg'; nøtte.obj.position.copy(camera.position);
       smule('oppdrag ' + def.id);
       def.kjør(oppdrag);
+      leggMiniMerker();
     });
   }
   function avsluttOppdrag() {
     for (const id of timere) clearTimeout(id);
     timere.length = 0;
     for (const t of ting.slice()) fjernTing(t);
+    fjernMiniMerker();
     for (const x of ekstra) scene.remove(x);
     ekstra.length = 0;
     anim.length = 0;
@@ -1499,6 +1579,7 @@ export function startSpill(A) {
     animSteg(dt);
     partikkelSteg(dt);
     tingSteg(dt, tid);
+    miniSteg(tid);
     nøtteSteg(dt, tid);
     if (oppdrag && oppdrag.steg) oppdrag.steg(dt, tid);
     golfSteg(dt);
@@ -1514,7 +1595,6 @@ export function startSpill(A) {
     oppdrag: () => (oppdrag ? oppdrag.def.id : null),
     hjelpNivå: () => hjelpNivå,
     sisteTale: () => (sisteTale ? sisteTale[0] : null),
-    stemme: () => (stemme ? stemme.name + ' ' + stemme.lang : null),
     ting: () => ting.filter((t) => t.aktiv && t.obj.parent).map((t) => { const s = skjerm(t.pos); return { id: t.id, x: Math.round(s.x), y: Math.round(s.y), foran: s.foran, synlig: synlig(t), avst: +t.pos.distanceTo(camera.position).toFixed(2) }; }),
     neste() {
       const t = hjelpMål(); if (!t) return null;
@@ -1523,6 +1603,9 @@ export function startSpill(A) {
         påSkjerm: s.foran && s.x > 20 && s.x < innerWidth - 20 && s.y > 20 && s.y < innerHeight - 20 };
     },
     settStille(s) { stille = s; },
+    mini: { liste: () => miniListe.map((m) => m.id), åpne: (id) => { const m = miniListe.find((x) => x.id === id); if (m) åpneMini(m); }, åpen: () => miniÅpen,
+      merker: () => miniTing.map((t) => { const s = skjerm(t.pos); return { id: t.m.id, x: Math.round(s.x), y: Math.round(s.y), foran: s.foran, synlig: synlig(t), avst: +t.pos.distanceTo(camera.position).toFixed(2), ståsted: !!ståsted(t.pos) }; }),
+      tryll: (id) => { const t = miniTing.find((x) => x.m.id === id); if (t) tryllTil(t); } },
     travel: () => travel,
     // sjekk av plasseringene: finnes ståsted med fri sikt for alle ting i hvert oppdrag?
     ståsted: (id) => { const t = ting.find((x) => x.id === id); if (!t) return null; const f = ståsted(t.pos); return f ? [+f.x.toFixed(2), +(-f.z).toFixed(2), +f.y.toFixed(2)] : null; },

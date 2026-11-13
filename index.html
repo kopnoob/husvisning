@@ -165,7 +165,7 @@
 // Oppstart: bare HTML, CSS og dette lille skriptet. three.js og modellen lastes først når en modus er valgt.
 // Skriver hvert steg (brødsmuler) til localStorage før det startes, så vi ser hvor en telefon eventuelt stopper.
 (function () {
-  var VERSJON = 5, VERSJON_TEKST = 'versjon 5, 13.11. kl. 00.30';
+  var VERSJON = 6, VERSJON_TEKST = 'versjon 6, 13.11. kl. 02.17';
   window.HUS_V = String(VERSJON);
   var NOKKEL = 'husvisning.forsok';
   var $ = function (id) { return document.getElementById(id); };
@@ -288,7 +288,7 @@
     $('forrige').textContent = 'Forrige forsøk (modus ' + forrige.modus + ') stoppet etter: ' + s[1] + ' (' + (s[0] / 1000).toFixed(1) + ' s)';
     $('forrige').style.display = 'block';
   }
-  // lyd og tale må låses opp i selve trykket på iPhone; spill.js bruker det som lages her
+  // lyden må låses opp i selve trykket på iPhone; spill.js bruker det som lages her
   function lasOppLyd() {
     try {
       var AC = window.AudioContext || window.webkitAudioContext;
@@ -296,7 +296,6 @@
       if (window.HUS_LYD && window.HUS_LYD.state === 'suspended') window.HUS_LYD.resume();
       if (window.HUS_LYD) { var o = window.HUS_LYD.createBuffer(1, 1, 22050), s = window.HUS_LYD.createBufferSource(); s.buffer = o; s.connect(window.HUS_LYD.destination); s.start(0); }
     } catch (e) {}
-    try { if (window.speechSynthesis) { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; window.speechSynthesis.speak(u); } } catch (e) {}
   }
   var forvalg = valgt || (beroring ? 'enkel' : (Math.min(innerWidth, innerHeight) < 600 ? 'lett' : 'full'));
   $('spillKnapp').addEventListener('click', function () { lasOppLyd(); start(forvalg, true); });

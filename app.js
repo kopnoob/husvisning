@@ -8,7 +8,7 @@ import { Capsule } from 'three/addons/math/Capsule.js';
 
 const smule = window.husSmule || (() => {});
 smule('three.js lastet');
-const V = '?v=' + (window.HUS_V || '5');           // på egne filer, så telefonen ikke bruker gamle kopier
+const V = '?v=' + (window.HUS_V || '6');           // på egne filer, så telefonen ikke bruker gamle kopier
 const $ = (id) => document.getElementById(id);
 const PARAM = new URLSearchParams(location.search);
 const iPadSomMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
@@ -720,6 +720,7 @@ const SUB = 5;
 let forsteBilde = false;
 function loop() {
   const dt = Math.min(0.05, klokke.getDelta());
+  if (window.HUS_PAUSE) { requestAnimationFrame(loop); return; }      // et minispill dekker skjermen: ikke regn og tegn huset
   if (klar) {
     for (let i = 0; i < SUB; i++) steg(dt / SUB);
     if (autogang.mål) {
