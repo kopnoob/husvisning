@@ -9,7 +9,7 @@ export const MINISPILL = [
   { id: 'hopp', navn: 'Opp i eika', ikon: '🌳', rom: 'Terrassen', sted: [13.0, 1.6, -0.425] },
   { id: 'sokker', navn: 'Sokkevasken', ikon: '🧦', rom: 'Vaskerommet', sted: [11.0, 6.0, 2.776] },
   { id: 'blokker', navn: 'Blokkbrettet', ikon: '🟦', rom: 'Loftet', sted: [13.2, 7.0, 5.42] },
-  { id: 'kort', navn: 'Vendekort', ikon: '🃏', rom: 'Stua', sted: [7.9, 6.1, 0] },
+  { id: 'kort', navn: 'Vendekort', ikon: '🃏', rom: 'Stua', sted: [8.6, 6.0, 0] },
   { id: 'bil', navn: 'Bilturen', ikon: '🚗', rom: 'Garasjen', sted: [-4.4, 9.4, -0.516] },
   { id: 'minigolf', navn: 'Minigolf', ikon: '⛳', rom: 'Annekset', sted: [-6.8, -0.6, -0.435] },
   { id: 'slange', navn: 'Larven', ikon: '🐛', rom: 'Barnerommet', sted: [3.5, 5.6, 2.776] },

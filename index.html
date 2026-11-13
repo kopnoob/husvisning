@@ -138,7 +138,7 @@
   <div id="forrige"></div>
   <h1>Husvisning</h1>
   <p>Huset, ute og inne.</p>
-  <button id="spillKnapp" class="stor" aria-label="Spill skattejakten"><i aria-hidden="true">🐿️</i><b>Spill</b><span>skattejakt med ekornet Nøtte</span></button>
+  <button id="spillKnapp" class="stor" aria-label="Spill"><i aria-hidden="true">🐿️</i><b>Spill</b><span>et minispill i hvert rom, med ekornet Nøtte</span></button>
   <button id="friKnapp" class="middels"><i aria-hidden="true">👣</i><b>Gå rundt fritt</b><span>se på huset uten oppdrag</span></button>
   <details id="voksne"><summary>For voksne</summary>
     <p class="liten">Gå rundt fritt med valgt modus. Spillet bruker Enkel på telefon.</p>
@@ -165,7 +165,7 @@
 // Oppstart: bare HTML, CSS og dette lille skriptet. three.js og modellen lastes først når en modus er valgt.
 // Skriver hvert steg (brødsmuler) til localStorage før det startes, så vi ser hvor en telefon eventuelt stopper.
 (function () {
-  var VERSJON = 6, VERSJON_TEKST = 'versjon 6, 13.11. kl. 02.17';
+  var VERSJON = 7, VERSJON_TEKST = 'versjon 7, 13.11. kl. 07.42';
   window.HUS_V = String(VERSJON);
   var NOKKEL = 'husvisning.forsok';
   var $ = function (id) { return document.getElementById(id); };

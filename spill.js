@@ -1,5 +1,6 @@
-// Skattejakten: spill for barn på 6 år oppå husvisningen. Lastes av app.js når «Spill» er valgt (window.HUS_SPILL).
-// All styring er én finger: trykk på en ting for å ta den, trykk på gulvet for å gå, dra for å se rundt.
+// Spillet for barn på 6 år oppå husvisningen: barnet går rundt i huset og finner et minispill i hvert rom.
+// Lastes av app.js når «Spill» er valgt (window.HUS_SPILL). All styring er én finger: trykk på gulvet for å gå, dra for å se rundt,
+// trykk på et rundt merke for å spille. Den opprinnelige skattejakten (ni oppdrag) er tatt ut; se spill.js.v6 for den.
 // Ekornet Nøtte viser vei og hjelper av seg selv hvis barnet står fast. Ingen tale: beskjeder vises som korte snakkebobler.
 // Minispillene ligger i mini/ og åpnes fra kartet eller fra de runde merkene i rommene.
 // Ingen nettverk, ingen lenker ut, ingen personopplysninger. Framgang i localStorage (nøkkel husspill.v1).
@@ -18,7 +19,7 @@ export function startSpill(A) {
   // ---------------------------------------------------------------- lagring
   function lesLager() { try { return JSON.parse(localStorage.getItem(LAGER) || 'null'); } catch (e) { return null; } }
   let data = lesLager() || {};
-  data = { v: 1, ferdig: data.ferdig || {}, mynter: data.mynter || 0, lyd: data.lyd !== false, mini: data.mini || {} };
+  data = { v: 1, ferdig: data.ferdig || {}, mynter: data.mynter || 0, lyd: data.lyd !== false, mini: data.mini || {}, pokal: !!data.pokal, krone: !!data.krone };
   function lagre() { try { localStorage.setItem(LAGER, JSON.stringify(data)); } catch (e) {} }
 
   // ---------------------------------------------------------------- lyd (WebAudio, ingen filer)
@@ -144,27 +145,13 @@ export function startSpill(A) {
   @keyframes sMerke { from { opacity: .9; transform: scale(.4); } to { opacity: 0; transform: scale(1.4); } }
   #sTryll { position: absolute; inset: 0; background: radial-gradient(circle, #fff8d8, #f7c96b); opacity: 0; pointer-events: none; transition: opacity .35s; }
   #sTryll.paa { opacity: 1; }
-  #sKart, #sFeiring, #sVoksen { position: absolute; inset: 0; display: none; pointer-events: auto; overflow: auto;
+  #sKart, #sVoksen { position: absolute; inset: 0; display: none; pointer-events: auto; overflow: auto;
     padding: calc(12px + var(--st)) calc(12px + var(--sr)) calc(12px + var(--sb)) calc(12px + var(--sl)); }
   #sKart { background: rgba(20,30,40,.35); }
   #sKart .ark { margin: 58px auto 0; width: min(460px, 100%); background: #f3e2b8; border-radius: 18px; padding: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.4);
     background-image: radial-gradient(circle at 20% 10%, rgba(255,255,255,.4), transparent 40%), radial-gradient(circle at 80% 90%, rgba(150,100,40,.18), transparent 50%); }
-  #sKart h2 { margin: 0 0 10px; text-align: center; font-size: 26px; color: #6b4219; display: flex; justify-content: center; gap: 8px; align-items: center; }
-  #sRutenett { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  #sRutenett button { aspect-ratio: 1; min-height: 88px; border-radius: 16px; background: rgba(255,255,255,.35); border: 3px dashed rgba(107,66,25,.45) !important;
+  #sKart h2 { margin: 0 0 10px; text-align: center; font-size: 30px; color: #4a5a2a; display: flex; justify-content: center; gap: 8px; align-items: center; }
     font-size: 46px; position: relative; color: #2a1d10; padding: 0; }
-  #sRutenett button.ferdig { background: #fff7e0; border: 3px solid #c9963f !important; }
-  #sRutenett button.ferdig::after { content: "⭐"; position: absolute; right: 4px; top: 2px; font-size: 22px; }
-  #sRutenett button.laast { opacity: .45; filter: grayscale(.8); }
-  #sRutenett button.neste { animation: sPuls 1.2s infinite; background: rgba(255,255,255,.7); }
-  #sRutenett button.skatt { background: rgba(200,60,40,.12); }
-  #sRutenett button small { position: absolute; left: 0; right: 0; bottom: 4px; font-size: 12px; font-weight: 700; color: #6b4219; }
-  #sFeiring { background: radial-gradient(circle, rgba(255,244,214,.98), rgba(242,165,65,.97)); z-index: 3; text-align: center; }
-  #sFeiring .stor { font-size: 120px; margin-top: 18vh; animation: sSpinn 1s; }
-  @keyframes sSpinn { from { transform: scale(.2) rotate(-200deg); } }
-  #sFeiring .tekst { font-size: 26px; font-weight: 800; color: #6b4219; margin: 10px 20px; }
-  #sFeiring .rad { font-size: 40px; margin: 10px; letter-spacing: 4px; }
-  #sFeiring button { width: 110px; height: 110px; border-radius: 50%; background: #3fb36b; color: #fff; font-size: 54px; margin-top: 16px; box-shadow: 0 5px 16px rgba(0,0,0,.3); }
   .sKonfetti { position: fixed; top: -20px; width: 12px; height: 18px; border-radius: 3px; pointer-events: none; z-index: 16; animation: sFall linear forwards; }
   @keyframes sFall { to { transform: translateY(110vh) rotate(720deg); } }
   #sVoksen { background: rgba(10,9,8,.8); color: #f3efe8; }
@@ -173,7 +160,10 @@ export function startSpill(A) {
   #sVoksen p { color: rgba(243,239,232,.7); font-size: 14px; }
   #sVoksen button { display: block; width: 100%; margin: 8px 0; padding: 12px; border-radius: 10px; background: #2c2824; color: #f3efe8; font-size: 16px; text-align: left; }
   #sVoksen button.fare { background: #6b2a1d; }
-  #sKart .ark.spillark { margin-top: 14px; background-color: #e9f0d8; }
+  #sKart .ark.spillark { margin-top: 58px; background-color: #e9f0d8; }
+  #sPokal { filter: grayscale(1); opacity: .35; }
+  #sPokal.vunnet { filter: none; opacity: 1; }
+  #sSum { font-variant-numeric: tabular-nums; }
   #sMiniRute { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   #sMiniRute button { aspect-ratio: 1; min-height: 64px; border-radius: 14px; background: #fff; border: 3px solid #9bb66a !important; font-size: 34px; position: relative; color: #2a1d10; padding: 0 0 12px; }
   #sMiniRute button:active { transform: scale(.95); }
@@ -188,7 +178,7 @@ export function startSpill(A) {
   ui.id = 'sUI';
   ui.innerHTML = `
     <div id="sTopp">
-      <button id="sHjem" class="sRund" aria-label="Til skattekartet">🗺️</button>
+      <button id="sHjem" class="sRund" aria-label="Alle spillene">🎮</button>
       <div id="sMynter"><span>${MYNT}</span><b>0</b></div>
       <div class="fyll"></div>
       <button id="sGjenta" class="sRund" aria-label="Vis beskjeden igjen">💬</button>
@@ -207,12 +197,10 @@ export function startSpill(A) {
     </div>
     <button id="sFerdig" aria-label="Ferdig med golf">✔</button>
     <div id="sTryll"></div>
-    <div id="sKart"><div class="ark"><h2>🗺️ Skattekartet</h2><div id="sRutenett"></div></div>
-      <div class="ark spillark"><h2>🎮 Spill</h2><div id="sMiniRute"></div></div>
+    <div id="sKart"><div class="ark spillark"><h2><span id="sPokal">🏆</span><span id="sSum"></span></h2><div id="sMiniRute"></div></div>
       <div style="position:absolute;top:calc(12px + var(--st));right:calc(12px + var(--sr))"><button id="sLaas" class="sRund" aria-label="For voksne: hold inne">🔒<i></i></button></div>
       <div style="position:absolute;top:calc(12px + var(--st));left:calc(12px + var(--sl));display:flex;gap:10px"><button id="sGjenta2" class="sRund" aria-label="Vis beskjeden igjen">💬</button><button id="sLyd2" class="sRund" aria-label="Lyd">🔊</button></div>
     </div>
-    <div id="sFeiring"><div class="stor"></div><div class="tekst"></div><div class="rad"></div><button id="sVidere" aria-label="Videre">▶</button></div>
     <div id="sVoksen"><div class="boks">
       <h3>For voksne</h3>
       <p>Framgangen ligger bare på denne enheten. Ingen data sendes noe sted.</p>
@@ -582,7 +570,6 @@ export function startSpill(A) {
   let travel = false;           // tryllereise pågår
   let opptatt = false;          // animasjon som ikke skal forstyrres
   let stille = 0, hjelpNivå = 0, visTid = -1e9;
-  let øktFerdig = 0;
   const timere = [];
   function oppdragTimer(fn, ms) { const id = setTimeout(fn, ms); timere.push(id); return id; }
   function framgang() { stille = 0; hjelpNivå = 0; søyle.visible = false; $('sNotte').classList.remove('puls'); if (oppdrag && nøtte.modus === 'vis') nøtte.modus = oppdrag.nøtteModus || 'følg'; }
@@ -651,7 +638,7 @@ export function startSpill(A) {
     } else if (stille > 55 && hjelpNivå < 2) {
       visTid = -1e9; visVei(true); visTid = performance.now();
       si('Følg pila! Eller trykk på meg nederst, så tryller jeg deg dit.', '👇');
-    } else if (stille > 90 && hjelpNivå < 3) {
+    } else if (stille > 90 && hjelpNivå < 3 && !oppdrag.def.ingenTryll) {
       hjelpNivå = 3;
       const t = hjelpMål();
       si('Hokus pokus! Jeg tryller deg dit.', '✨');
@@ -794,7 +781,7 @@ export function startSpill(A) {
   $('sVenstre').addEventListener('click', () => snu(1));
   $('sHoyre').addEventListener('click', () => snu(-1));
   $('sNotte').addEventListener('click', () => { lydKlar(); if (modusSkjerm === 'oppdrag') visVei(); });
-  $('sHjem').addEventListener('click', () => { lydKlar(); avsluttOppdrag(); visKart(); });
+  $('sHjem').addEventListener('click', () => { lydKlar(); lyd.klikk(); visKart(); });
   $('sGjenta').addEventListener('click', () => { lydKlar(); gjenta(); });
   $('sGjenta2').addEventListener('click', () => { lydKlar(); gjenta(); });
   const lydKnapp = () => { data.lyd = !data.lyd; lagre(); oppdaterLydKnapper(); if (data.lyd) lyd.pling(); };
@@ -823,104 +810,48 @@ export function startSpill(A) {
   $('vLyd').addEventListener('click', () => { data.lyd = !data.lyd; lagre(); oppdaterLydKnapper(); });
   $('vNull').addEventListener('click', () => {
     if (++nullKlikk < 2) { $('vNull').textContent = 'Trykk en gang til for å slette all framgang'; return; }
-    data.ferdig = {}; data.mynter = 0; data.mini = {}; lagre(); settMynter();
+    data.ferdig = {}; data.mynter = 0; data.mini = {}; data.pokal = false; data.krone = false; lagre(); settMynter();
     $('vNull').textContent = 'Framgangen er nullstilt';
-    tegnKart();
+    tegnMiniRute();
   });
   $('vStart').addEventListener('click', () => { location.href = location.pathname; });
 
-  // ---------------------------------------------------------------- felles avslutning: kartbiten
-  function visKartbit(nær) {
-    let p = nær;
-    if (!p) {
-      camera.getWorldDirection(_f); _f.y = 0; _f.normalize();
-      p = camera.position.clone().addScaledVector(_f, 1.3); p.y -= 0.25;
-    }
-    lyd.fanfare();
-    sprut(p, 24, { farger: [0xffcf3f, 0xff5a5f, 0x3fb36b, 0x3f8cff], fart: 1.6, str: 0.025 });
-    const t = lagTing(lag.kartbit(), p, { r: 0.25, spinn: true, navn: 'kartbit', glitterH: 0.22,
-      ved: (t) => {
-        fjernTing(t); lyd.pling(); framgang();
-        vinn();
-      } });
-    t.hint = 'Kartbiten! Trykk på den.';
-    si('Se! En bit av skattekartet! Trykk på den.', '🗺️');
-    framgang();
-  }
-
-  const OPPDRAG = [];
-  function vinn() {
-    const def = oppdrag.def;
-    data.ferdig[def.id] = true; lagre();
-    øktFerdig++;
-    avsluttOppdrag(true);
-    visFeiring(def);
-  }
-
-  function visFeiring(def) {
-    modusSkjerm = 'feiring';
-    const f = $('sFeiring');
-    f.querySelector('.stor').innerHTML = def.merke;
-    const antall = OPPDRAG.filter((d) => !d.finale && data.ferdig[d.id]).length;
-    f.querySelector('.tekst').textContent = def.finale ? 'Du fant skatten!' : 'Kartbit ' + antall + ' av 8';
-    f.querySelector('.rad').innerHTML = def.finale ? OPPDRAG.filter((d) => !d.finale).map((d) => d.merke).join('') : MYNT + ' ' + data.mynter;
-    f.style.display = 'block';
-    konfetti(def.finale ? 120 : 60);
-    lyd.fanfare();
-    si(def.finale ? 'Hurra! Du fant skatten! Du er en ekte skattejeger!' : `Hurra! Du har funnet ${antall} av åtte kartbiter. Trykk på den grønne knappen.`, def.merke);
-  }
-  $('sVidere').addEventListener('click', () => { lydKlar(); $('sFeiring').style.display = 'none'; visKart(); });
-
-  // ---------------------------------------------------------------- skattekartet (velg oppdrag)
   let modusSkjerm = 'kart';
-  function åpen(d) {
-    if (d.id === 'm1') return true;
-    if (!data.ferdig.m1) return false;
-    if (d.finale) return OPPDRAG.filter((x) => !x.finale).every((x) => data.ferdig[x.id]);
-    return true;
-  }
-  function tegnKart() {
-    const r = $('sRutenett');
-    r.innerHTML = '';
-    const neste = OPPDRAG.find((d) => åpen(d) && !data.ferdig[d.id]);
-    for (const d of KART_REKKE.map((id) => OPPDRAG.find((x) => x.id === id))) {
-      const b = document.createElement('button');
-      const ferdig = !!data.ferdig[d.id], ok = åpen(d);
-      b.className = (ferdig ? 'ferdig ' : '') + (ok ? '' : 'laast ') + (neste === d ? 'neste ' : '') + (d.finale ? 'skatt' : '');
-      b.innerHTML = (ferdig ? d.merke : ok ? d.ikon : (d.finale ? '🔒' : d.ikon)) + `<small>${d.kort}</small>`;
-      b.setAttribute('aria-label', d.navn);
-      b.dataset.id = d.id;
-      b.addEventListener('click', () => {
-        lydKlar();
-        if (!ok) { lyd.hmm(); si(d.finale ? 'Skattekista åpnes når du har alle åtte kartbitene.' : 'Først må du finne den første kartbiten. Trykk på gullmynten!', d.finale ? '🗺️' : MYNT); return; }
-        startOppdrag(d);
-      });
-      r.appendChild(b);
-    }
-  }
-  const KART_REKKE = ['m2', 'm3', 'm5', 'm1', 'm9', 'm4', 'm6', 'm7', 'm8'];
 
   // ---------------------------------------------------------------- minispill (mini/*.js, lastes først når de åpnes)
-  const miniV = '?v=' + (window.HUS_V || '6');
+  const miniV = '?v=' + (window.HUS_V || '7');
   let miniListe = [], miniTing = [], miniÅpen = false;
   const miniMat = {};
-  import('./mini/liste.js' + miniV).then((m) => { miniListe = m.MINISPILL; tegnMiniRute(); if (oppdrag) leggMiniMerker(); }).catch((e) => smule('minispill-lista feilet: ' + (e && e.message)));
-  // «Gå rundt»: ingen oppgave, bare huset og merkene for spillene. Nøtte viser vei til nærmeste spill som ikke er prøvd.
-  const FRI = { id: 'fri', navn: 'Gå rundt', start: [8.6, 10.3, 0, 8.6, 7.0, 0.6],
+  import('./mini/liste.js' + miniV).then((m) => { miniListe = m.MINISPILL; tegnMiniRute(); if (oppdrag && !travel) leggMiniMerker(); }).catch((e) => smule('minispill-lista feilet: ' + (e && e.message)));
+  // Huset er spillet: ingen oppgave, bare rommene og merkene for spillene. Nøtte viser vei til nærmeste spill som ikke er prøvd.
+  const FRI = { id: 'fri', navn: 'Gå rundt', start: [8.6, 9.7, 0, 8.6, 6.0, 0.85], ingenTryll: true,
+    hint1: 'Her borte! Jeg har funnet et spill.',
     kjør(o) {
       o.hjelpMål = () => {
         let best = null, bd = 1e9;
-        for (const t of miniTing) { const d = t.pos.distanceTo(camera.position) + (data.mini[t.m.id] ? 60 : 0); if (d < bd) { bd = d; best = t; } }
+        for (const t of miniTing) { const d = t.pos.distanceTo(camera.position) + Math.abs(t.pos.y - camera.position.y) * 4 + (data.mini[t.m.id] ? 60 : 0); if (d < bd) { bd = d; best = t; } }
         return best;
       };
-      si('Gå rundt i huset! Trykk på de runde merkene for å spille.', '🎮');
+      const ny = !Object.keys(data.mini).length;
+      si(ny ? 'Hei! Jeg er Nøtte. Trykk på gulvet for å gå, og på de runde merkene for å spille!' : 'Trykk på de runde merkene for å spille!', '🎮');
     } };
+  function sumStjerner() { let n = 0; for (const k in data.mini) n += data.mini[k].stj || 0; return n; }
+  function sjekkPokal() {
+    // første gang alle spillene er prøvd, og første gang alle har tre stjerner: feiring
+    const alle = miniListe.length && miniListe.every((m) => (data.mini[m.id] || {}).stj > 0);
+    const fulle = miniListe.length && miniListe.every((m) => (data.mini[m.id] || {}).stj >= 3);
+    if (fulle && !data.krone) { data.krone = true; data.pokal = true; lagre(); lyd.fanfare(); konfetti(120); si('Tre stjerner i alle spillene! Du er mester i hele huset!', '👑'); }
+    else if (alle && !data.pokal) { data.pokal = true; lagre(); lyd.fanfare(); konfetti(80); si('Du har prøvd alle spillene i huset! Pokalen er din!', '🏆'); }
+  }
   function tegnMiniRute() {
     const r = $('sMiniRute');
     r.innerHTML = '';
+    $('sSum').textContent = ' ' + sumStjerner() + ' ⭐';
+    $('sPokal').textContent = data.krone ? '👑' : '🏆';
+    $('sPokal').classList.toggle('vunnet', !!data.pokal);
     const g = document.createElement('button');
-    g.className = 'gaa'; g.textContent = '🚶'; g.setAttribute('aria-label', 'Gå rundt i huset'); g.dataset.id = 'fri';
-    g.addEventListener('click', () => { lydKlar(); startOppdrag(FRI); });
+    g.className = 'gaa'; g.textContent = '🚶'; g.setAttribute('aria-label', 'Tilbake til huset'); g.dataset.id = 'fri';
+    g.addEventListener('click', () => { lydKlar(); lyd.klikk(); lukkKart(); });
     r.appendChild(g);
     for (const m of miniListe) {
       const b = document.createElement('button');
@@ -928,7 +859,14 @@ export function startSpill(A) {
       b.innerHTML = m.ikon + '<small>' + [0, 1, 2].map((i) => (i < stj ? '<b>⭐</b>' : '⭐')).join('') + '</small>';
       b.setAttribute('aria-label', m.navn + ' (' + m.rom + ')');
       b.dataset.id = m.id;
-      b.addEventListener('click', () => åpneMini(m));
+      b.addEventListener('click', () => {
+        // spillet åpnes i rommet sitt: barnet står ved merket når det lukkes
+        const t = miniTing.find((x) => x.m.id === m.id);
+        const f = t && (t.ståsted || (t.ståsted = ståsted(t.pos)));
+        lukkKart();
+        if (f) { A.settFot(f, t.pos); if (nøtte.modus === 'følg' || nøtte.modus === 'vis') nøtte.obj.position.copy(camera.position); }
+        åpneMini(m);
+      });
       r.appendChild(b);
     }
   }
@@ -946,7 +884,7 @@ export function startSpill(A) {
           d.stj = Math.max(d.stj, res.stjerner); d.beste = Math.max(d.beste, res.poeng || 0); d.n++;
           data.mynter += res.stjerner; lagre();
         } });
-    }).then(() => { window.HUS_PAUSE = false; miniÅpen = false; stille = 0; settMynter(); tegnMiniRute(); })
+    }).then(() => { window.HUS_PAUSE = false; miniÅpen = false; stille = 0; hjelpNivå = 0; settMynter(); tegnMiniRute(); sjekkPokal(); })
       .catch((e) => { window.HUS_PAUSE = false; miniÅpen = false; smule('minispill feilet: ' + (e && e.message)); lyd.hmm(); });
   }
   // merket i rommet: en rund brikke med spillets ikon, alltid vendt mot barnet
@@ -977,21 +915,19 @@ export function startSpill(A) {
   function miniSteg(tid) {
     for (const t of miniTing) { t.obj.position.y = t.pos.y + Math.sin(tid * 2 + t.fase) * 0.04; t.obj.scale.setScalar(0.36 + Math.sin(tid * 3 + t.fase) * 0.02); }
   }
-  function visKart(førsteGang) {
+  function visKart() {            // oversikten over spillene, oppå huset
+    if (travel || golf.aktiv || miniÅpen) return;
     modusSkjerm = 'kart';
-    oppdrag = null;
-    nøtte.modus = 'borte';
-    $('sBunn').style.display = 'none'; $('sTopp').style.display = 'none'; $('sIkoner').innerHTML = ''; $('sHaand').style.display = 'none'; $('sMaaler').style.display = 'none';
-    pil.style.display = 'none'; søyle.visible = false;
-    A.settFot(T(8.0, 19.5, -0.55), T(8.6, 7.0, 3.6));
-    tegnKart();
+    A.gåTil(null);
+    $('sBunn').style.display = 'none'; $('sTopp').style.display = 'none'; $('sHaand').style.display = 'none';
+    pil.style.display = 'none'; prat.classList.remove('vis');
+    tegnMiniRute();
     $('sKart').style.display = 'block';
-    const antall = OPPDRAG.filter((d) => !d.finale && data.ferdig[d.id]).length;
-    if (data.ferdig.m9) si('Du har funnet skatten! Du kan spille alt en gang til.', '👑');
-    else if (øktFerdig >= 3 && øktFerdig % 3 === 0 && !førsteGang) si('Du har vært kjempeflink! Kanskje det er tid for en pause? Skatten venter på deg.', '😴');
-    else if (!data.ferdig.m1) si(førsteGang ? 'Hei! Jeg er Nøtte. Skattekartet mitt har revnet i biter! Hjelper du meg å finne dem? Trykk på gullmynten.' : 'Trykk på gullmynten for å begynne.', MYNT);
-    else if (antall === 8) si('Kartet er helt! Trykk på skattekista i midten!', '👑');
-    else si(`Du har ${antall} av åtte kartbiter. Velg hvor du vil lete!`, '🗺️');
+  }
+  function lukkKart() {
+    $('sKart').style.display = 'none';
+    $('sBunn').style.display = 'flex'; $('sTopp').style.display = 'flex';
+    modusSkjerm = 'oppdrag'; stille = 0;
   }
 
   function startOppdrag(def) {
@@ -1050,7 +986,7 @@ export function startSpill(A) {
   }
 
   // ================================================================ GOLF-MINISPILLET
-  // Starter i oppdrag 7, eller når man går bort til slagmatta i annekset. Ett grep: hold fingeren og slipp.
+  // Starter når man går bort til slagmatta i annekset. Ett grep: hold fingeren og slipp.
   // Banen tegnes på et lite lerret (256 x 160) foran simulatorskjermen i modellen.
   const golf = { aktiv: false, lader: false, ladT: 0, kraft: 0, slag: 0, hio: false, ball: null, o: null, mat: null, cooldown: 0, anim: null, baneFase: 0 };
   const GL = document.createElement('canvas'); GL.width = 256; GL.height = 160;
@@ -1196,377 +1132,6 @@ export function startSpill(A) {
     if (f) f();
   });
 
-  // ================================================================ OPPDRAGENE
-  // start: [X, Y, Z (gulv), se mot X, se mot Y, se mot Z (valgfri)] i Blender-mål
-
-  // 1: lære å trykke og gå. Seks gullmynter i første etasje.
-  OPPDRAG.push({ id: 'm1', navn: 'Kartbiten i gangen', kort: 'Gangen', ikon: MYNT, merke: '🧭', start: [8.6, 10.3, 0, 8.6, 7.0, 0.6],
-    hint1: 'Her borte! Kom og se hva jeg fant.',
-    kjør(o) {
-      const plasser = [[8.6, 8.35, 0], [7.4, 5.0, 0], [6.2, 2.7, 0], [3.7, 5.0, 0], [4.5, 9.4, 0], [10.6, 10.3, 0]];
-      let funnet = 0;
-      settIkoner(plasser.map(() => MYNT));
-      const ta = (t) => {
-        samle(t); ikonOk(funnet); funnet++;
-        if (funnet === 1) {
-          si('Bra! Trykk på gulvet der du vil gå. Finn flere gullmynter!', '👆');
-          for (let i = 1; i < plasser.length; i++) lagTing(lag.mynt(), påFlate(...plasser[i], { h: 0.1 }), { r: 0.14, spinn: true, ved: ta });
-        } else if (funnet === 3) si('Supert! Dra fingeren for å snu deg. Eller trykk på pilene nederst.', '↔️');
-        else if (funnet === plasser.length) oppdragTimer(() => visKartbit(), 700);
-        else si(['Pling!', 'Enda en!', 'Du er flink!', 'Nesten alle!'][funnet % 4], MYNT);
-      };
-      lagTing(lag.mynt(), påFlate(...plasser[0], { h: 0.6, gulv: true }), { r: 0.14, spinn: true, ved: ta });
-      si('Se, en gullmynt! Trykk på den.', MYNT);
-    } });
-
-  // 2: skattekaka. Fem ingredienser, røre, kartbiten er inni kaka.
-  OPPDRAG.push({ id: 'm2', navn: 'Skattekaka', kort: 'Kjøkkenet', ikon: '🥚', merke: '🎂', start: [12.6, 6.7, -0.385, 14.4, 8.6, 0.2],
-    kjør(o) {
-      const ting5 = [['egg', '🥚', [12.5, 10.6, -0.385]], ['melk', '🥛', [10.7, 9.0, 0]], ['mel', '🌾', [15.6, 10.6, -0.385]], ['jordbær', '🍓', [13.5, 5.5, -0.385]], ['sjokolade', '🍫', [10.4, 4.6, 0]]];
-      settIkoner(ting5.map((x) => x[1]));
-      let har = 0, rørt = 0;
-      const bolleP = påFlate(14.1, 8.4, -0.385);
-      const bolle = lagTing(lag.bolle(), bolleP, { r: 0.22, hopp: false, glitter: false, hjelp: false, ved: () => {
-        if (har < 5) { lyd.hmm(); si('Vi trenger alt på lista først. Se øverst!', '🥚'); return; }
-        rørt++; lyd.rør(); framgang();
-        const deig = bolle.obj.getObjectByName('deig'); deig.position.y = 0.04 + rørt * 0.014;
-        animer(0.3, (k) => { bolle.obj.rotation.z = Math.sin(k * Math.PI * 4) * 0.12; });
-        sprut(bolleP.clone().add(V3(0, 0.15, 0)), 5, { farger: [0xf3dfb0, 0xffffff], fart: 0.8, str: 0.015 });
-        if (rørt < 5) { si(['Rør, rør!', 'Rør litt til!', 'Mmm!', 'En gang til!'][rørt - 1], '🥣'); return; }
-        bolle.aktiv = false; opptatt = true;
-        si('Nå steker vi kaka! Tre, to, en...', '🔥');
-        oppdragTimer(() => {
-          lyd.pop(); sprut(bolleP.clone().add(V3(0, 0.2, 0)), 30, { farger: [0xffffff, 0xf7a8c4], fart: 1.2, str: 0.03 });
-          fjernTing(bolle); opptatt = false;
-          const kake = lagTing(lag.kake(), bolleP, { r: 0.24, hopp: false, ved: (t) => {
-            t.aktiv = false; lyd.pop();
-            sprut(bolleP.clone().add(V3(0, 0.2, 0)), 20, { farger: [0xf7a8c4, 0xfff3f6], fart: 1.5 });
-            visKartbit(bolleP.clone().add(V3(0, 0.45, 0)));
-          } });
-          kake.hint = 'Trykk på kaka!';
-          si('Kaka er ferdig! Hmm, det er noe inni. Trykk på kaka!', '🎂');
-          framgang();
-        }, 2200);
-      } });
-      bolle.hint = 'Her er bollen. Trykk på den!';
-      for (let i = 0; i < ting5.length; i++) {
-        const [navn, ikon, p] = ting5[i];
-        const t = lagTing(lag[navn](), påFlate(...p, { h: 0.01 }), { r: 0.14, ved: (t) => {
-          samle(t); ikonOk(i); har++;
-          if (har < 5) si(['Ett!', 'To!', 'Tre!', 'Fire! En til!'][har - 1] + ' ' + ikon, ikon);
-          else { o.hjelpMål = () => (bolle.aktiv ? bolle : null); bolle.hjelp = true; si('Alt er funnet! Gå til den blå bollen på kjøkkenøya og trykk på den. Rør fem ganger!', '🥣'); }
-        } });
-        t.hint = 'Her er ' + navn + '!';
-      }
-      si('Vi skal bake en skattekake! Finn egg, melk, mel, jordbær og sjokolade.', '🎂');
-    } });
-
-  // 3: gjemsel i andre etasje. Nøtte fniser; lyden blir sterkere når du er nær.
-  OPPDRAG.push({ id: 'm3', navn: 'Gjemsel med Nøtte', kort: 'Gjemsel', ikon: '🙈', merke: '🙈', start: [6.3, 6.6, 2.776, 3.0, 6.6, 3.6],
-    hint1: 'Hi hi! Hør, jeg er her borte!',
-    kjør(o) {
-      const steder = [[2.6, 10.3], [3.0, 6.5], [9.2, 4.1], [10.6, 9.8], [15.6, 6.3], [11.5, 4.0], [8.8, 4.2], [15.6, 10.4]];
-      const brukt = new Set();
-      let runde = 0, gjemt = null;
-      settIkoner(['🐿️', '🐿️', '🐿️']);
-      const gjem = () => {
-        // tilfeldig gjemmested som ikke er brukt, og som har et ståsted med fri sikt (så hjelpen alltid kan vise vei)
-        const rekke = steder.map((x, i) => i).filter((i) => !brukt.has(i)).sort(() => Math.random() - 0.5);
-        let p = null, f = null;
-        for (const i of rekke) {
-          const q = påFlate(steder[i][0], steder[i][1], 2.776, { h: 0 });
-          const st = ståsted(q.clone().add(V3(0, 0.22, 0)));
-          if (st) { brukt.add(i); p = q; f = st; break; }
-          brukt.add(i);
-        }
-        if (!p) { p = påFlate(3.0, 6.5, 2.776); f = null; }
-        lyd.sus();
-        o.nøtteModus = 'gjemt'; nøtte.modus = 'gjemt'; nøtte.mål.copy(p);
-        gjemt = lagTing(new THREE.Group(), p.clone().add(V3(0, 0.22, 0)), { r: 0.28, glitter: false, hopp: false, ved: (t) => {
-          fjernTing(t); gjemt = null;
-          lyd.fnis(0.3); lyd.pling(); ikonOk(runde); runde++; gimynt(2); framgang();
-          sprut(p.clone().add(V3(0, 0.3, 0)), 20, { farger: [0xffcf3f, 0xff9a3f], fart: 1.4 });
-          o.nøtteModus = 'følg'; nøtte.modus = 'følg';
-          if (runde === 3) { si('Du fant meg igjen! Her, ta kartbiten!', '🎉'); oppdragTimer(() => visKartbit(), 1500); return; }
-          si(['Du fant meg! Lukk øynene, jeg gjemmer meg igjen!', 'Hi hi! En gang til! Tell til tre!'][runde - 1], '🙈');
-          oppdragTimer(gjem, 3200);
-        } });
-        gjemt.hint = 'Hør! Her er jeg!';
-        gjemt.ståsted = f;
-        si(runde === 0 ? 'Nå gjemmer jeg meg! Hør etter fnisingen, og finn meg!' : 'Klar, ferdig, finn meg!', '👂');
-      };
-      // fnis med jevne mellomrom: sterkere jo nærmere, og fra riktig side
-      const fnisLøkke = () => {
-        if (!oppdrag || oppdrag !== o) return;
-        if (gjemt) {
-          const d = gjemt.pos.distanceTo(camera.position);
-          camera.getWorldDirection(_f); _h.set(-_f.z, 0, _f.x).normalize();
-          const til = gjemt.pos.clone().sub(camera.position).normalize();
-          lyd.fnis(Math.min(0.35, 0.5 / (1 + d / 2)) + (hjelpNivå ? 0.1 : 0), til.dot(_h));
-        }
-        oppdragTimer(fnisLøkke, 3600);
-      };
-      si('Nå leker vi gjemsel! Jeg gjemmer meg i andre etasje. Lukk øynene!', '🙈');
-      oppdragTimer(gjem, 2600);
-      oppdragTimer(fnisLøkke, 4500);
-    } });
-
-  // 4: rydd og sorter: leker i tre farger, kister i samme farge
-  OPPDRAG.push({ id: 'm4', navn: 'Rydd i kistene', kort: 'Rydde', ikon: '🧸', merke: '🧸', start: [7.8, 5.4, 2.776, 7.8, 3.9, 3.1],
-    kjør(o) {
-      const FARGE = { rød: 0xe0312f, blå: 0x2f74e0, gul: 0xf5c518 };
-      const kister = [['rød', [6.5, 4.3]], ['gul', [7.25, 3.95]], ['blå', [8.9, 4.2]]].map(([f, [X, Y]]) => {
-        const p = påFlate(X, Y, 2.776, { gulv: true });
-        const t = lagTing(lag.kiste(FARGE[f]), p, { r: 0.32, hopp: false, glitter: false, hjelp: false, data: { farge: f }, ved: (t) => slippI(t) });
-        t.hint = 'Her er den ' + f + 'e kista!';
-        return t;
-      });
-      const leker = [['ball', 'rød', '⚽', [3.0, 6.5]], ['bil', 'blå', '🚙', [3.5, 8.5]], ['bamse', 'gul', '🧸', [8.8, 10.0]], ['kloss', 'rød', '🧱', [9.3, 6.5]], ['ring', 'blå', '🔵', [13.8, 7.8]], ['and', 'gul', '🦆', [10.6, 9.8]]];
-      let holder = null, ryddet = 0;
-      settIkoner(leker.map((l) => l[2]));
-      const lekeTing = leker.map(([type, farge, ikon, [X, Y]], i) => {
-        const t = lagTing(lag.leke(type, FARGE[farge]), påFlate(X, Y, 2.776, { h: 0.005 }), { r: 0.16, data: { farge, ikon, i, hjem: null }, ved: (t) => {
-          if (holder) { holder.obj.visible = true; holder.aktiv = true; }
-          holder = t; t.aktiv = false; t.obj.visible = false;
-          lyd.mynt(); framgang();
-          $('sHaand').textContent = '🤲 ' + ikon; $('sHaand').style.display = 'block';
-          si(`Du har ${t.data.farge === 'gul' ? 'en gul' : t.data.farge === 'rød' ? 'en rød' : 'en blå'} ${ikon}. Legg den i den ${farge}e kista!`, ikon);
-        } });
-        t.hint = 'Her er en leke!';
-        return t;
-      });
-      function slippI(k) {
-        if (!holder) { lyd.hmm(); si('Finn en leke først, så legger vi den i kista.', '🧸'); return; }
-        if (k.data.farge !== holder.data.farge) {
-          lyd.hmm(); framgang();
-          animer(0.4, (e) => { k.obj.rotation.y = Math.sin(e * Math.PI * 4) * 0.15; });
-          si(`Hmm, leken er ${holder.data.farge}. Finn den ${holder.data.farge}e kista!`, holder.data.ikon);
-          return;
-        }
-        const t = holder; holder = null; $('sHaand').style.display = 'none';
-        t.obj.visible = true;
-        const lokk = k.obj.getObjectByName('lokk');
-        animer(0.25, (e) => { lokk.position.y = 0.33 + e * 0.25; });
-        flyTil(t.obj, foran(0.6, 0.4), k.pos.clone().add(V3(0, 0.2, 0)), 0.55, 0.5).then(() => {
-          fjernTing(t);
-          animer(0.25, (e) => { lokk.position.y = 0.58 - e * 0.25; });
-          lyd.pling(); sprut(k.pos.clone().add(V3(0, 0.4, 0)), 14, { farger: [FARGE[k.data.farge], 0xffffff], fart: 1.2 });
-        });
-        ikonOk(t.data.i); ryddet++; gimynt(1); framgang();
-        if (ryddet === leker.length) { si('Alt er ryddet! Hva er det som ligger der?', '✨'); oppdragTimer(() => visKartbit(kister[1].pos.clone().add(V3(0, 0.75, 0))), 1200); }
-        else si(['Riktig!', 'Flott!', 'Ja, der hører den hjemme!', 'Bra jobba!', 'Bare en igjen!'][ryddet - 1], '⭐');
-      }
-      o.hjelpMål = () => {
-        if (holder) return kister.find((k) => k.data.farge === holder.data.farge);
-        return null;
-      };
-      si('Lekene ligger strødd i andre etasje! Finn dem, og legg hver leke i kista med samme farge.', '🧸');
-    } });
-
-  // 5: ballonger på loftet; den gylne har kartbiten
-  OPPDRAG.push({ id: 'm5', navn: 'Ballonger på loftet', kort: 'Loftet', ikon: '🎈', merke: '🎈', start: [11.0, 7.1, 5.42, 15.0, 7.0, 6.3],
-    kjør(o) {
-      const FARGER = [0xff5a5f, 0x3f8cff, 0x3fb36b, 0xb45cff, 0xff9a3f, 0xff6fb5];
-      let sprukket = 0, laget = 0;
-      const MÅL = 10;
-      settIkoner(['🎈', '🎈', '🎈', '🎈', '🎈', '🎈', '🎈', '🎈', '🎈', '🌟']);
-      const gulvY = camera.position.y - A.OYE;
-      function nyBallong() {
-        if (!oppdrag || oppdrag !== o || laget >= MÅL) return;
-        if (ting.filter((t) => t.aktiv).length >= 4) { oppdragTimer(nyBallong, 1000); return; }
-        // et sted foran deg med fri sikt
-        let p = null;
-        for (let k = 0; k < 12 && !p; k++) {
-          camera.getWorldDirection(_f); _f.y = 0; _f.normalize(); _h.set(-_f.z, 0, _f.x);
-          const q = camera.position.clone().addScaledVector(_f, 1.6 + Math.random() * 2.2).addScaledVector(_h, (Math.random() - 0.5) * 2.2);
-          const d = A.stråle(V3(q.x, gulvY + 1.0, q.z), NED, 3);
-          if (d >= 3) continue;
-          q.y = gulvY + 1.0 - d;
-          if (Math.abs(q.y - gulvY) > 0.1) continue;
-          const øye = camera.position, til = q.clone().add(V3(0, 0.6, 0)).sub(øye), L = til.length();
-          if (A.stråle(øye, til.normalize(), L) < L - 0.3) continue;
-          p = q;
-        }
-        if (!p) { oppdragTimer(nyBallong, 600); return; }
-        laget++;
-        const gull = laget === MÅL;
-        const obj = lag.ballong(gull ? 0xf4c430 : FARGER[laget % FARGER.length], gull);
-        const t = lagTing(obj, p, { r: 0.3, hopp: false, glitter: gull, glitterH: 0.85, ved: (t) => {
-          t.aktiv = false; fjernTing(t);
-          const sp = t.obj.position.clone().add(V3(0, 0.6, 0));
-          lyd.pop(); sprut(sp, 18, { farger: gull ? [0xf4c430, 0xffffff] : [FARGER[sprukket % FARGER.length], 0xffffff, 0xffcf3f], fart: 2, g: 2 });
-          ikonOk(sprukket); sprukket++; gimynt(1); framgang();
-          if (gull) { si('Den gylne ballongen! Se hva som falt ut!', '🌟'); visKartbit(sp.clone().add(V3(0, -0.2, 0))); return; }
-          si(['Pang!', 'Pop!', 'Hi hi!', 'Bom!', 'Pang pang!'][sprukket % 5], '🎈');
-          oppdragTimer(nyBallong, 500);
-        } });
-        t.data.stig = 0;
-        t.hint = 'Der er en ballong!';
-        if (gull) si('Se, en gyllen ballong! Trykk på den!', '🌟');
-        oppdragTimer(nyBallong, 1800);
-      }
-      o.steg = (dt, tid) => {
-        for (const t of ting) {
-          if (!t.aktiv || t.data.stig === undefined) continue;
-          if (t.data.base === undefined) t.data.base = t.pos.y;
-          t.data.stig = Math.min(1.1, t.data.stig + dt * 0.25);
-          t.obj.position.y = t.data.base + t.data.stig + Math.sin(tid * 2 + t.fase) * 0.05;
-          t.obj.rotation.z = Math.sin(tid * 1.3 + t.fase) * 0.1;
-          t.pos.y = t.obj.position.y + 0.6;      // trykkpunktet er selve ballongen
-        }
-      };
-      si('Ballonger på loftet! Trykk på dem så de smeller. Et sted er det en gyllen ballong!', '🎈');
-      oppdragTimer(nyBallong, 1500);
-    } });
-
-  // 6: hagen: plant blomster, finn pinnsvinet, gi det et eple
-  OPPDRAG.push({ id: 'm6', navn: 'Pinnsvinet i hagen', kort: 'Hagen', ikon: '🦔', merke: '🦔', start: [16.6, -0.75, -0.425, 12.0, -3.0, 0.0],
-    kjør(o) {
-      const flekker = [[12, -2], [14, -3.5], [10, -4], [8, -2.5]];
-      const BLOMST = [0xff5a5f, 0xb45cff, 0xff9a3f, 0xff6fb5];
-      let plantet = 0, harEple = false;
-      settIkoner(['🌷', '🌷', '🌷', '🌷', '🦔', '🍎']);
-      flekker.forEach(([X, Y], i) => {
-        const p = påFlate(X, Y, -0.55, { gulv: true });
-        const t = lagTing(lag.flekk(), p, { r: 0.3, hopp: false, glitter: true, glitterH: 0.2, ved: (t) => {
-          fjernTing(t);
-          const b = pynt(lag.blomst(BLOMST[i]), p); b.scale.setScalar(0.01);
-          animer(0.8, (k) => b.scale.setScalar(0.01 + myk(k) * 1.4));
-          lyd.pling(); sprut(p.clone().add(V3(0, 0.3, 0)), 12, { farger: [BLOMST[i], 0xffffff], fart: 1 });
-          ikonOk(plantet); plantet++; gimynt(1); framgang();
-          if (plantet < 4) si(['En blomst!', 'Så fin!', 'En til!'][plantet - 1], '🌷');
-          else { si('Så fine blomster! Hør, noe rasler i hagen. Hvem er det?', '🦔'); oppdragTimer(visPinnsvin, 1500); }
-        } });
-        t.hint = 'Plant en blomst her!';
-      });
-      let pinnsvin = null, eple = null;
-      function visPinnsvin() {
-        const p = påFlate(6, -5, -0.55, { gulv: true });
-        pinnsvin = lagTing(lag.pinnsvin(), p, { r: 0.25, ved: (t) => {
-          if (!harEple) {
-            if (!t.data.møtt) { t.data.møtt = true; ikonOk(4); lyd.fnis(0.15); framgang(); si('Et pinnsvin! Det er sultent. Kan du finne et eple til det?', '🍎'); visEple(); }
-            else { lyd.hmm(); si('Pinnsvinet vil ha et eple. Finn eplet!', '🍎'); }
-            return;
-          }
-          t.aktiv = false; lyd.tygg(); framgang(); $('sHaand').style.display = 'none';
-          const e = pynt(lag.eple(), foran(0.6, 0.4));
-          flyTil(e, e.position.clone(), p.clone().add(V3(0, 0.05, 0.25)), 0.6, 0.3).then(() => { scene.remove(e); });
-          animer(1.2, (k) => { t.obj.position.y = t.pos.y + Math.abs(Math.sin(k * Math.PI * 4)) * 0.15; });
-          si('Nam nam! Pinnsvinet er glad. Det har noe til deg!', '🦔');
-          oppdragTimer(() => visKartbit(p.clone().add(V3(0, 0.5, 0))), 1600);
-        } });
-        pinnsvin.hint = 'Her er pinnsvinet!';
-        o.hjelpMål = () => (harEple ? (pinnsvin && pinnsvin.aktiv ? pinnsvin : null) : (pinnsvin.data.møtt && eple && eple.aktiv ? eple : null));
-      }
-      function visEple() {
-        const p = påFlate(17.5, -5, -0.55, { gulv: true });
-        const t = eple = lagTing(lag.eple(), p, { r: 0.18, ved: (t) => {
-          samle(t); harEple = true; ikonOk(5);
-          $('sHaand').textContent = '🤲 🍎'; $('sHaand').style.display = 'block';
-          si('Et eple! Gi det til pinnsvinet. Trykk på pinnsvinet!', '🦔');
-        } });
-        t.hint = 'Her er eplet!';
-      }
-      si('Velkommen til hagen! Trykk på de lysende flekkene for å plante blomster.', '🌷');
-    } });
-
-  // 7: golf i annekset: fem slag i golfsimulatoren gir kartbiten. Ferdig spilt: fri golf så lenge man vil.
-  OPPDRAG.push({ id: 'm7', navn: 'Golf i annekset', kort: 'Golf', ikon: '⛳', merke: '⛳', start: [-6.3, -3.55, -0.435, -6.45, -7.0, 0.75],
-    kjør(o) {
-      o.nøtteModus = 'følg';
-      if (data.ferdig.m7) {
-        startGolf({ påFerdig: () => { avsluttOppdrag(); visKart(); } });
-        si('Fri golf! Hold fingeren på skjermen og slipp for å slå. Trykk på den grønne haken når du er ferdig.', '⛳');
-        return;
-      }
-      settIkoner(['⛳', '⛳', '⛳', '⛳', '⛳']);
-      let stjerner = 0;
-      startGolf({
-        iOppdrag: true,
-        påSlag(nr, n) {
-          ikonListe[nr].ik = '⭐'.repeat(n); ikonOk(nr); stjerner += n;
-          if (nr === 4) {
-            stoppGolf();
-            oppdragTimer(() => { si(`Du fikk ${stjerner} stjerner! Og se hva som kom ut av skjermen!`, '⛳'); visKartbit(golf.mat.clone().add(V3(0, 0.9, -0.7))); }, 1800);
-            return false;
-          }
-          return true;
-        },
-        påFerdig: () => { avsluttOppdrag(); visKart(); },
-      });
-      si('Golf! Hold fingeren på skjermen, og slipp for å slå. Jo lenger du holder, jo lenger flyr ballen!', '⛳');
-    } });
-
-  // 8: gjørmebilen i garasjen
-  OPPDRAG.push({ id: 'm8', navn: 'Gjørmebilen', kort: 'Garasjen', ikon: '🚗', merke: '🚗', start: [-2.0, 7.0, -0.516, -4.4, 9.4, 0.2],
-    kjør(o) {
-      const sentrum = påFlate(-4.4, 9.4, -0.516, { gulv: true });
-      const bil = pynt(lag.bil(), sentrum);
-      // flekker på østsida, panseret, taket og bak (bilen står nord–sør, fronten mot nord)
-      const flekker = [[0.41, 0.45, 0.3, 'ø'], [0.41, 0.5, -0.4, 'ø'], [0.38, 0.85, -0.1, 'ø'], [0, 0.66, 0.6, 'opp'], [0, 1.0, -0.2, 'opp'], [-0.15, 0.45, -0.86, 'bak']];
-      let rene = 0;
-      settIkoner(flekker.map(() => '🟤'));
-      flekker.forEach(([x, y, z, side], i) => {
-        const g = lag.gjørme();
-        const p = sentrum.clone().add(V3(x, y, -z));     // three.js: -z er nord
-        if (side === 'ø') g.rotation.y = Math.PI / 2; else if (side === 'opp') g.rotation.x = -Math.PI / 2; else g.rotation.y = 0;
-        const t = lagTing(g, p, { r: 0.2, hopp: false, glitter: false, ved: (t) => {
-          t.aktiv = false; lyd.plask(); framgang();
-          sprut(p, 14, { farger: [0xffffff, 0xd6f0ff], fart: 0.9, str: 0.035, g: -0.6, vokse: 0.4, liv: 1.4 });
-          animer(0.4, (k) => t.obj.scale.setScalar(1 - k)).then(() => fjernTing(t));
-          ikonListe[i].ik = '✨'; ikonOk(i); rene++; gimynt(1);
-          if (rene < flekker.length) si(['Skrubb!', 'Plask!', 'Blank og fin!', 'Mer såpe!', 'En igjen!'][rene - 1], '🫧');
-          else {
-            si('Bilen er ren! Pip pip!', '🚗');
-            lyd.tut();
-            const lys = bil.children.filter((c) => c.name === 'lys');
-            animer(1.5, (k) => { const på = Math.floor(k * 6) % 2 === 0; lys.forEach((l) => { l.material = mat(0xfff3a0, på ? 2 : 0.5); }); });
-            oppdragTimer(() => visKartbit(sentrum.clone().add(V3(0.9, 0.9, 0.5))), 1700);
-          }
-        } });
-        t.hint = 'Her er det gjørme!';
-      });
-      si('Å nei, bilen er full av gjørme! Trykk på flekkene for å vaske den.', '🚗');
-    } });
-
-  // 9: finalen: grav fram skattekista ved krysset
-  OPPDRAG.push({ id: 'm9', navn: 'Skattekista', kort: 'Skatten', ikon: '👑', merke: '👑', finale: true, start: [16.6, -0.75, -0.425, 10.0, -4.0, 0.0],
-    kjør(o) {
-      const p = påFlate(9.5, -4.0, -0.55, { gulv: true });
-      let grav = 0;
-      settIkoner(['⛏️', '⛏️', '⛏️', '⛏️', '⛏️']);
-      const kryss = lagTing(lag.kryss(), p, { r: 0.45, hopp: false, glitterH: 0.3, ved: (t) => {
-        grav++; lyd.grav(); framgang();
-        sprut(p.clone().add(V3(0, 0.1, 0)), 14, { farger: [0x6b4219, 0x8a5a2b, 0x4a3a2c], fart: 1.8, str: 0.04 });
-        ikonOk(grav - 1);
-        t.obj.position.y = t.pos.y - grav * 0.02;
-        if (grav < 5) { si(['Grav!', 'Grav, grav!', 'Dypere!', 'Nesten!'][grav - 1], '⛏️'); return; }
-        fjernTing(t);
-        const kiste = lag.skattekiste();
-        const k = lagTing(kiste, p.clone().add(V3(0, -0.5, 0)), { r: 0.45, hopp: false, glitterH: 0.7, ved: (k) => åpne(k) });
-        k.aktiv = false;
-        animer(1.2, (e) => { k.obj.position.y = p.y - 0.5 + myk(e) * 0.5; }).then(() => { k.pos.copy(p); k.aktiv = true; });
-        lyd.fanfare();
-        si('Skattekista! Trykk på den for å åpne!', '👑');
-      } });
-      kryss.hint = 'Krysset! Her er skatten!';
-      function åpne(k) {
-        k.aktiv = false; opptatt = true;
-        const lokk = k.obj.getObjectByName('lokk');
-        animer(0.9, (e) => { lokk.rotation.x = -myk(e) * 1.9; });
-        k.obj.getObjectByName('gull').visible = true;
-        lyd.pling(); gimynt(20);
-        for (let i = 0; i < 4; i++) oppdragTimer(() => sprut(p.clone().add(V3(0, 0.5, 0)), 14, { farger: [0xf4c430, 0xffe27a], fart: 2.4, str: 0.035, g: 5 }), 300 + i * 350);
-        for (let i = 0; i < 5; i++) oppdragTimer(() => {
-          const høyt = p.clone().add(V3((Math.random() - 0.5) * 6, 5 + Math.random() * 2, (Math.random() - 0.5) * 3 - 2));
-          lyd.smell(); sprut(høyt, 20, { farger: [[0xff5a5f, 0xffcf3f], [0x3f8cff, 0xffffff], [0x3fb36b, 0xb45cff]][i % 3], fart: 3.5, str: 0.08, g: 1, opp: -0.3, liv: 1.6 });
-        }, 900 + i * 600);
-        si('Gull! Masse gull! Og se, fyrverkeri!', '🎆');
-        oppdragTimer(() => { opptatt = false; data.ferdig.m9 = true; lagre(); øktFerdig++; const def = oppdrag.def; avsluttOppdrag(); visFeiring(def); }, 5200);
-      }
-      si('Kartet er helt! Krysset viser hvor skatten er. Finn det røde krysset i hagen og grav!', '❌');
-    } });
-
   // ---------------------------------------------------------------- hovedløkka (henger seg på app.js)
   let tid = 0;
   A.etterSteg.push((dt) => {
@@ -1611,5 +1176,5 @@ export function startSpill(A) {
     ståsted: (id) => { const t = ting.find((x) => x.id === id); if (!t) return null; const f = ståsted(t.pos); return f ? [+f.x.toFixed(2), +(-f.z).toFixed(2), +f.y.toFixed(2)] : null; },
   };
 
-  visKart(true);
+  startOppdrag(FRI);
 }
